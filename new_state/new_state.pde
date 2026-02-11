@@ -21,6 +21,13 @@ PImage[] runFrames;
 PImage[] jumpFrames;
 SoundFile song;
 
+// 音乐驱动的时间与场景系统
+MusicClock musicClock;
+Scene mainScene;
+BeatDispatcher beatDispatcher;
+// 是否强制用音乐时间做主时间轴（建议在实时演示时开启）
+boolean syncToMusic = true;
+
 int state = 0;
 boolean jumpRequested = false;
 int lastRunIndex = -1;
@@ -98,6 +105,18 @@ void setup() {
   song = new SoundFile(this, musicFile);
   song.loop();
 
+  // 初始化音乐时钟与场景系统
+  musicClock = new MusicClock(song, bpm);
+  mainScene = new Scene();
+  beatDispatcher = new BeatDispatcher();
+
+  // 将各个图层包装成 SceneObject，按从远到近的顺序加入
+  mainScene.add(new CloudLayerObject(cloudLayer));      // 最远：云
+  mainScene.add(new MountainLayerObject(mountainLayer));// 中景：山
+  mainScene.add(new DenglongManagerObject(denglongManager)); // 装饰：灯笼
+  mainScene.add(new GroundManagerObject(groundManager));// 近景：地面
+  mainScene.add(new StoneManagerObject(stoneManager));  // 前景：石头障碍
+
   prevMillis = millis();
   println(">>> 测试模式: " + testMode);
   if (testMode) println(">>> 预设跳跃时间点: 2.0s, 4.5s, 7.0s...");
@@ -109,17 +128,30 @@ void draw() {
   float dt = (currMillis - prevMillis) / 1000.0;
   prevMillis = currMillis;
 
-  if (!isPaused) animTime += dt * timeSpeed;
+  // 更新音乐时钟（无论是否暂停，都可以拿到当前位置）
+  if (musicClock != null) {
+    musicClock.update();
+  }
+
+  // 主时间轴：优先跟随音乐，保证长时间播放也不会音画漂移
+  if (!isPaused) {
+    if (syncToMusic && musicClock != null) {
+      animTime = musicClock.musicTime;
+    } else {
+      animTime += dt * timeSpeed;
+    }
+  }
+
   if (animTime < 0) animTime = 0;
 
   float groundSpeed = GROUND_SPEED;
   if (!isPaused) {
-    cloudLayer.update(dt);
-    mountainLayer.update(dt);
-    denglongManager.update(dt);
-    stoneManager.update(dt);
-    moneyEffect.update(dt);
-    groundManager.update(dt);
+    // 使用场景统一更新各层（内部仍然是按 dt 更新，兼容旧逻辑）
+    if (mainScene != null) {
+      float musicTime = (musicClock != null) ? musicClock.musicTime : animTime;
+      float beat = (musicClock != null) ? musicClock.beat : 0;
+      mainScene.updateAll(dt, musicTime, beat);
+    }
 
     if (stoneManager.checkAutoJump(PONY_X)) {
       if (state == 0) {
@@ -211,11 +243,17 @@ void draw() {
   }
 
   drawBackground();
-  cloudLayer.display();
-  mountainLayer.display();
-  denglongManager.display();
-  groundManager.display();  // 地面移到这里
-  stoneManager.display();
+  // 场景负责绘制所有背景/中景/障碍层
+  if (mainScene != null) {
+    mainScene.drawAll();
+  } else {
+    // 容错：如果场景未初始化，退回旧的绘制方式
+    cloudLayer.display();
+    mountainLayer.display();
+    denglongManager.display();
+    groundManager.display();
+    stoneManager.display();
+  }
 
   if (currentDisplayFrame != null) {
     drawPony(currentDisplayFrame);

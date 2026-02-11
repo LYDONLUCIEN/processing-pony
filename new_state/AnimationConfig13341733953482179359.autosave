@@ -1,0 +1,125 @@
+// ==================== 动画配置系统 ====================
+// 所有动画参数都可以在这里调整
+
+class AnimationConfig {
+  // 场景参数
+  static final int SCENE_WIDTH = 800;
+  static final int SCENE_HEIGHT = 600;
+
+  // ==================== 背景层配置 ====================
+  static class Background {
+    static final String PATH = "../assets/background/background.png";
+    static final float SCALE = 1.0;  // 背景缩放
+  }
+
+  // ==================== 云层配置 ====================
+  static class Cloud {
+    static final String PATH_PREFIX = "./assets/cloud/cd";
+    static final String PATH_SUFFIX = ".png";
+    static final int COUNT = 5;  // cd1.png 到 cd5.png
+
+    // 云的生成参数
+    static final int MIN_CLOUDS = 3;      // 屏幕上最少云朵数量
+    static final int MAX_CLOUDS = 6;      // 屏幕上最多云朵数量
+    static final float MIN_SCALE = 0.3;   // 最小缩放
+    static final float MAX_SCALE = 0.8;   // 最大缩放
+    static final float MIN_Y = 50;        // 最高位置
+    static final float MAX_Y = 250;       // 最低位置
+    static final float SPEED = 30.0;      // 移动速度 (像素/秒)
+
+    // 云的透明度
+    static final int ALPHA = 200;
+  }
+
+  // ==================== 山层配置 ====================
+  static class Mountain {
+    // 山峰
+    static final String MOUNTAIN_PATH_PREFIX = "./assets/mountain/mt";
+    static final String MOUNTAIN_PATH_SUFFIX = ".png";
+    static final int MOUNTAIN_COUNT = 3;  // mt1.png 到 mt3.png
+
+    // 山云
+    static final String MOUNTAIN_CLOUD_PATH_PREFIX = "./assets/mountain/mt-cloud";
+    static final String MOUNTAIN_CLOUD_PATH_SUFFIX = ".png";
+    static final int MOUNTAIN_CLOUD_COUNT = 3;  // mt-cloud1.png 到 mt-cloud3.png
+
+    // 山的生成参数
+    static final int MIN_MOUNTAINS = 2;   // 最少山峰数量
+    static final int MAX_MOUNTAINS = 4;   // 最多山峰数量
+    static final float MIN_SCALE = 0.5;   // 最小缩放
+    static final float MAX_SCALE = 0.9;   // 最大缩放
+    static final float BASE_Y = 450;      // 基础Y位置
+    static final float SPEED = 80.0;      // 移动速度 (像素/秒) - 比云快
+
+    // 山云参数
+    static final int MIN_MT_CLOUDS = 2;
+    static final int MAX_MT_CLOUDS = 4;
+    static final float MT_CLOUD_MIN_SCALE = 0.4;
+    static final float MT_CLOUD_MAX_SCALE = 0.7;
+    static final float MT_CLOUD_SPEED = 60.0;
+  }
+
+  // ==================== 灯笼配置 ====================
+  static class Denglong {
+    static final String PATH_PREFIX = "./assets/denglong/dl";
+    static final String PATH_SUFFIX = ".png";
+    static final int COUNT = 5;  // dl1.png 到 dl5.png
+
+    static final float SPAWN_INTERVAL = 8.0;  // 生成间隔 (秒)
+    static final float SPEED = 150.0;         // 移动速度 (像素/秒)
+    static final float BASE_Y = 380;          // 基础Y位置
+    static final float SCALE = 0.6;           // 缩放
+  }
+
+  // ==================== 石头配置 ====================
+  static class Stone {
+    static final String PATH_PREFIX = "./assets/stone/st";
+    static final String PATH_SUFFIX = ".png";
+    static final int COUNT = 3;  // st1.png 到 st3.png
+
+    static final float SPAWN_INTERVAL = 5.0;  // 生成间隔 (秒)
+    static final float SPEED = 200.0;         // 移动速度 (像素/秒)
+    static final float BASE_Y = 480;          // 基础Y位置
+    static final float SCALE = 0.4;           // 缩放
+    static final float JUMP_TRIGGER_X = 150;  // 触发跳跃的X位置
+  }
+
+  // ==================== 金币红包配置 ====================
+  static class Money {
+    static final String[] PATHS = {
+      "./assets/money/hb1.png",
+      "./assets/money/hb2.png",
+      "./assets/money/hb3.png",
+      "./assets/money/hb4.png",
+      "./assets/money/mn1.png",
+      "./assets/money/yb1.png",
+      "./assets/money/yb2.png"
+    };
+
+    static final int PARTICLE_COUNT = 20;    // 每次生成的粒子数量
+    static final float SPREAD_X = 100;        // X轴扩散范围
+    static final float SPREAD_Y = 150;        // Y轴扩散范围
+    static final float GRAVITY = 300.0;       // 重力加速度
+    static final float MIN_SPEED = 80.0;      // 最小初速度
+    static final float MAX_SPEED = 200.0;     // 最大初速度
+    static final float FADE_TIME = 2.0;       // 消失时间 (秒)
+    static final float BASE_SCALE = 0.3;      // 基础缩放
+  }
+
+  // ==================== 地面配置 ====================
+  static class Ground {
+    static final String PATH = "./assets/ground/ground.png";
+    static final float SPEED = 300.0;         // 移动速度 (像素/秒) - 最快
+    static final float Y = 530;               // Y位置
+    static final float SCALE = 0.3;           // 缩放
+    static final int TILE_COUNT = 3;          // 需要的图块数量 (用于无缝循环)
+  }
+
+  // ==================== 小马配置 ====================
+  static class Pony {
+    static final float X = 200;              // 小马X位置
+    static final float Y = 400;              // 小马Y位置 (地面)
+    static final float SCALE = 0.5;          // 缩放
+    static final float JUMP_HEIGHT = 120;    // 跳跃高度
+  }
+}

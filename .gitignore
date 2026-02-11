@@ -19,3 +19,10 @@
 *.eps
 *.pdf
 
+.vscode/
+*.class
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store      # Mac 系统特有
+Thumbs.db      # Windows 系统特有

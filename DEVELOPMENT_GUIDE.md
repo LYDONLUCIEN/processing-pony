@@ -189,43 +189,56 @@ beatDispatcher.addListener(title);
 
 ---
 
-## 6. 小马控制器（未来改造约定）
+## 6. 小马控制器（已实现约定）
 
-为了保持一致性，后续如果把小马逻辑抽成独立类，请遵循：
+当前小马逻辑已经抽象为独立的 `PonyController`，位置为：`new_state/PonyController.pde`。
 
-- 文件：`PonyController.pde`。
-- 类定义：
+- 类定义（精简版）：
 
 ```java
 class PonyController extends SceneObject implements BeatListener {
-  // 内部持有 runFrames / jumpFrames / 状态机变量等
+  PonyController(PImage[] runFrames, PImage[] jumpFrames,
+                 float bpm, float beatsPerRunCycle, float beatsForRemainingJump) { ... }
 
-  void update(float dt, float musicTime, float beat) {
-    // 统一使用 musicTime/beat 作为输入
-  }
+  void update(float dt, float musicTime, float beat) { ... } // 跑/跳 FSM，基于 musicTime
+  void draw() { ... }                                        // 内部调用全局 drawPony()/drawWaitingIcon()
 
-  void draw() {
-    // 通过 drawPony 或自己的绘制逻辑画出当前帧
-  }
+  // 对外控制接口
+  void requestJump();      // 请求一次跳跃（手动/石头/时间线）
+  void setTestMode(boolean enabled);
+  void toggleTestMode();
 
-  void onBeat(int beatIndex, float musicTime) {
-    // 可选：基于谱面、拍子触发跳跃 / 切换状态
-  }
+  // 调试只读接口
+  int getCurrentFrameIndex();
+  float getCurrentProgress();
+  String getStateLabel();
+  float getRunCycleOffset();
+  boolean isTestMode();
+  float[] getJumpTimeline();
+  int getNextTestIndex();
+
+  // 命中判定
+  boolean isMouseOver(int mx, int my);
+
+  // BeatListener 扩展点
+  void onBeat(int beatIndex, float musicTime) { ... }
 }
 ```
 
-- 主场景中：
+- 主场景中使用方式（已实现）：
 
 ```java
 PonyController pony;
 
 void setup() {
-  // ...
-  pony = new PonyController();
+  // 加载 runFrames / jumpFrames 之后：
+  pony = new PonyController(runFrames, jumpFrames, bpm, beatsPerRunCycle, beatsForRemainingJump);
   mainScene.add(pony);
   beatDispatcher.addListener(pony);
 }
 ```
+
+后续如果你为小马增加更多动作（如滑铲、二段跳、受伤等），请继续在 `PonyController` 内部扩展状态机和渲染逻辑，对外依然通过 `requestJump()` 等小而稳定的接口来触发行为。
 
 ---
 

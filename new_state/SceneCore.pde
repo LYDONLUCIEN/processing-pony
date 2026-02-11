@@ -185,3 +185,24 @@ class StoneManagerObject extends SceneObject {
   }
 }
 
+class MoneyEffectObject extends SceneObject {
+  MoneyEffect effect;
+
+  MoneyEffectObject(MoneyEffect effect) {
+    this.effect = effect;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (effect != null) {
+      effect.update(dt);
+    }
+  }
+
+  void draw() {
+    if (effect != null) {
+      effect.display();
+    }
+  }
+}
+
+

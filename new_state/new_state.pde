@@ -20,6 +20,7 @@ float bpm = 125.0;
 PImage[] runFrames;
 PImage[] jumpFrames;
 SoundFile song;
+PonyController pony;
 
 // 音乐驱动的时间与场景系统
 MusicClock musicClock;
@@ -28,26 +29,11 @@ BeatDispatcher beatDispatcher;
 // 是否强制用音乐时间做主时间轴（建议在实时演示时开启）
 boolean syncToMusic = true;
 
-int state = 0;
-boolean jumpRequested = false;
-int lastRunIndex = -1;
-
-PImage currentDisplayFrame = null;
-float ponyY;
-
 // ==================== 时间系统 ====================
 boolean isPaused = false;
 float animTime = 0;
 float timeSpeed = 1.0;
 int prevMillis = 0;
-
-float jumpStartTime = 0;
-float runCycleOffset = 0;
-
-// ==================== 测试模式配置 ====================
-boolean testMode = true;
-float[] jumpTimeline = { 2.0, 4.5, 7.0, 9.5, 12.0 };
-int nextTestIndex = 0;
 
 // ==================== 动画层系统 ====================
 PImage backgroundImage;
@@ -57,16 +43,6 @@ DenglongManager denglongManager;
 StoneManager stoneManager;
 MoneyEffect moneyEffect;
 GroundManager groundManager;
-
-// ==================== 小马碰撞检测 ====================
-boolean isMouseOverPony(int mx, int my) {
-  float ponyLeft = PONY_X - 100;
-  float ponyRight = PONY_X + 100;
-  float ponyTop = ponyY - 150;
-  float ponyBottom = ponyY + 50;
-
-  return mx >= ponyLeft && mx <= ponyRight && my >= ponyTop && my <= ponyBottom;
-}
 
 // ==================== 跳跃高度计算 ====================
 float getJumpHeight(float progress) {
@@ -93,8 +69,6 @@ void setup() {
 
   backgroundImage = loadImage(BACKGROUND_PATH);
 
-  ponyY = PONY_Y;
-
   cloudLayer = new CloudLayer();
   mountainLayer = new MountainLayer();
   denglongManager = new DenglongManager();
@@ -110,16 +84,22 @@ void setup() {
   mainScene = new Scene();
   beatDispatcher = new BeatDispatcher();
 
+  // 小马控制器（基于音乐时间驱动的跑/跳 FSM）
+  pony = new PonyController(runFrames, jumpFrames, bpm, beatsPerRunCycle, beatsForRemainingJump);
+
   // 将各个图层包装成 SceneObject，按从远到近的顺序加入
-  mainScene.add(new CloudLayerObject(cloudLayer));      // 最远：云
-  mainScene.add(new MountainLayerObject(mountainLayer));// 中景：山
-  mainScene.add(new DenglongManagerObject(denglongManager)); // 装饰：灯笼
-  mainScene.add(new GroundManagerObject(groundManager));// 近景：地面
-  mainScene.add(new StoneManagerObject(stoneManager));  // 前景：石头障碍
+  mainScene.add(new CloudLayerObject(cloudLayer));          // 最远：云
+  mainScene.add(new MountainLayerObject(mountainLayer));    // 中景：山
+  mainScene.add(new DenglongManagerObject(denglongManager));// 装饰：灯笼
+  mainScene.add(new GroundManagerObject(groundManager));    // 近景：地面
+  mainScene.add(new StoneManagerObject(stoneManager));      // 前景：石头障碍
+  mainScene.add(pony);                                      // 主角小马
+  mainScene.add(new MoneyEffectObject(moneyEffect));        // 前景：金币红包特效
+
+  // 注册需要响应整拍事件的对象
+  beatDispatcher.addListener(pony);
 
   prevMillis = millis();
-  println(">>> 测试模式: " + testMode);
-  if (testMode) println(">>> 预设跳跃时间点: 2.0s, 4.5s, 7.0s...");
   println(">>> 点击小马可以触发金币红包特效");
 }
 
@@ -144,106 +124,28 @@ void draw() {
 
   if (animTime < 0) animTime = 0;
 
-  float groundSpeed = GROUND_SPEED;
   if (!isPaused) {
-    // 使用场景统一更新各层（内部仍然是按 dt 更新，兼容旧逻辑）
+    // 在每一帧推进前，先分发节拍事件
+    if (beatDispatcher != null && musicClock != null) {
+      beatDispatcher.update(musicClock);
+    }
+
+    // 使用场景统一更新各层和所有对象（内部仍然是按 dt 更新，兼容旧逻辑）
     if (mainScene != null) {
       float musicTime = (musicClock != null) ? musicClock.musicTime : animTime;
       float beat = (musicClock != null) ? musicClock.beat : 0;
       mainScene.updateAll(dt, musicTime, beat);
     }
 
-    if (stoneManager.checkAutoJump(PONY_X)) {
-      if (state == 0) {
-        jumpRequested = true;
-        println("[AUTO] Stone trigger jump at " + nf(animTime, 0, 2) + "s");
-      }
-    }
-  }
-
-  if (testMode && nextTestIndex < jumpTimeline.length) {
-    if (animTime >= jumpTimeline[nextTestIndex]) {
-      jumpRequested = true;
-      println("[AUTO] Timeline jump at " + nf(animTime, 0, 2) + "s");
-      nextTestIndex++;
-    }
-  }
-
-  int currentFrameIndex = 0;
-  float currentProgress = 0;
-
-  if (state == 0) {
-    float relativeRunTime = animTime - runCycleOffset;
-    float durationPerCycle = (60.0 / bpm) * beatsPerRunCycle;
-    float currentCycleProgress = (relativeRunTime % durationPerCycle) / durationPerCycle;
-
-    if (currentCycleProgress < 0) currentCycleProgress += 1.0;
-
-    int index = int(currentCycleProgress * runTotalFrames);
-    if (index >= runTotalFrames) index = runTotalFrames - 1;
-
-    currentProgress = currentCycleProgress;
-
-    boolean transitionPoint = (index == 4);
-
-    if (transitionPoint && lastRunIndex != 4 && jumpRequested) {
-      currentDisplayFrame = runFrames[index];
-      lastRunIndex = index;
-      currentFrameIndex = index;
-
-      state = 1;
-      jumpStartTime = animTime;
-      jumpRequested = false;
-      println(">>> 起跳: RUN[4] -> JUMP[3] at " + nf(animTime, 0, 2));
-
-    } else {
-      lastRunIndex = index;
-      currentFrameIndex = index;
-      currentDisplayFrame = runFrames[index];
-    }
-
-    if (jumpRequested) drawWaitingIcon();
-
-  } else if (state == 1) {
-    float timeSinceJump = animTime - jumpStartTime;
-
-    int jumpStartFrame = 3;
-    int framesToPlay = jumpTotalFrames - jumpStartFrame;
-
-    float durationPerFrame = ((60.0 / bpm) * beatsForRemainingJump) / framesToPlay;
-    float totalJumpDurationSec = durationPerFrame * jumpTotalFrames;
-
-    float effectiveTime = timeSinceJump + (jumpStartFrame * durationPerFrame);
-    currentProgress = effectiveTime / totalJumpDurationSec;
-
-    if (timeSinceJump < 0) {
-      state = 0;
-      jumpRequested = true;
-      lastRunIndex = -1;
-      currentDisplayFrame = runFrames[0];
-    }
-
-    else if (currentProgress >= 1.0) {
-      state = 0;
-      lastRunIndex = -1;
-      runCycleOffset = animTime;
-      println("<<< 落地：重置跑步相位");
-
-      currentDisplayFrame = runFrames[0];
-      currentFrameIndex = 0;
-      currentProgress = 0;
-
-    } else {
-      int index = int(currentProgress * jumpTotalFrames);
-      if (index < 0) index = 0;
-      if (index >= jumpTotalFrames) index = jumpTotalFrames - 1;
-      currentFrameIndex = index;
-      currentDisplayFrame = jumpFrames[index];
+    // 石头自动跳跃：改为通知 PonyController，由其决定是否真正起跳
+    if (stoneManager.checkAutoJump(PONY_X) && pony != null) {
+      pony.requestJump();
+      println("[AUTO] Stone trigger jump at " + nf(animTime, 0, 2) + "s");
     }
   }
 
   drawBackground();
-  // 场景负责绘制所有背景/中景/障碍层
+  // 场景负责绘制所有背景/中景/前景层（包括小马和金币特效）
   if (mainScene != null) {
     mainScene.drawAll();
   } else {
@@ -255,13 +157,10 @@ void draw() {
     stoneManager.display();
   }
 
-  if (currentDisplayFrame != null) {
-    drawPony(currentDisplayFrame);
-  }
-
-  moneyEffect.display();
-
-  drawDebugUI(currentFrameIndex, currentProgress);
+  // 小马与金币特效已经挂在 Scene 中，这里只负责调试 UI
+  int frameIdx = pony != null ? pony.getCurrentFrameIndex() : 0;
+  float prog = pony != null ? pony.getCurrentProgress() : 0;
+  drawDebugUI(frameIdx, prog);
   drawTimeline();
 }
 
@@ -285,21 +184,24 @@ void drawPony(PImage img) {
 void drawWaitingIcon() {
   fill(255, 100, 100);
   noStroke();
-  circle(PONY_X, ponyY - 180, 20);
+  circle(PONY_X, PONY_Y - 180, 20);
 }
 
 void drawTimeline() {
-  if (!testMode) return;
+  if (pony == null || !pony.isTestMode()) return;
   stroke(180);
   line(50, height - 50, width - 50, height - 50);
   float timelineScale = (width - 100) / 15.0;
 
-  for (int i = 0; i < jumpTimeline.length; i++) {
-    float x = 50 + jumpTimeline[i] * timelineScale;
+  float[] timeline = pony.getJumpTimeline();
+  int nextIndex = pony.getNextTestIndex();
+
+  for (int i = 0; i < timeline.length; i++) {
+    float x = 50 + timeline[i] * timelineScale;
     fill(0);
     noStroke();
     circle(x, height - 50, 8);
-    if (i == nextTestIndex - 1) {
+    if (i == nextIndex - 1) {
       fill(0, 255, 0);
       circle(x, height - 50, 6);
     }
@@ -322,11 +224,14 @@ void drawDebugUI(int frameIdx, float prog) {
   int y = 10;
   int dy = 20;
 
-  text(testMode ? "[AUTO TEST MODE]" : "[MANUAL MODE]", 10, y);
+  String modeLabel = (pony != null && pony.isTestMode()) ? "[AUTO TEST MODE]" : "[MANUAL MODE]";
+  text(modeLabel, 10, y);
   y += dy * 1.5;
-  text("Time: " + nf(animTime, 0, 2) + "s", 10, y);
+  float t = (musicClock != null) ? musicClock.musicTime : animTime;
+  text("Time: " + nf(t, 0, 2) + "s", 10, y);
   y += dy;
-  text("Status: " + (state == 0 ? "RUN" : "JUMP"), 10, y);
+  String stateLabel = pony != null ? pony.getStateLabel() : "N/A";
+  text("Status: " + stateLabel, 10, y);
   y += dy;
   text("Paused: " + isPaused, 10, y);
   y += dy;
@@ -336,8 +241,8 @@ void drawDebugUI(int frameIdx, float prog) {
   text("Progress: " + nf(prog * 100, 0, 1) + "%", 10, y);
   y += dy;
 
-  if (state == 0) {
-    text("Run Offset: " + nf(runCycleOffset, 0, 2) + "s", 10, y);
+  if (pony != null) {
+    text("Run Offset: " + nf(pony.getRunCycleOffset(), 0, 2) + "s", 10, y);
     y += dy;
   }
 
@@ -364,12 +269,10 @@ void drawDebugUI(int frameIdx, float prog) {
 
 void keyPressed() {
   if (key == ' ') {
-    if (state == 0) jumpRequested = true;
+    if (pony != null) pony.requestJump();
   }
   if (key == 't' || key == 'T') {
-    testMode = !testMode;
-    nextTestIndex = 0;
-    if (!testMode) jumpRequested = false;
+    if (pony != null) pony.toggleTestMode();
   }
   if (key == 'p' || key == 'P') {
     isPaused = !isPaused;
@@ -394,8 +297,8 @@ void keyPressed() {
 }
 
 void mousePressed() {
-  if (isMouseOverPony(mouseX, mouseY)) {
-    moneyEffect.spawn(PONY_X, ponyY);
+  if (pony != null && pony.isMouseOver(mouseX, mouseY)) {
+    moneyEffect.spawn(PONY_X, PONY_Y);
     println("触发金币红包特效!");
   }
 }

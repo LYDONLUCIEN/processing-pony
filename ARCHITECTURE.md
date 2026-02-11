@@ -5,15 +5,16 @@
 - **素材工具层**
   - `slicer/slicer.pde`：离线的精灵图切片工具，用于把整张动作序列大图按行列切成独立帧 PNG（支持边缘裁剪），供运行时动画使用。
 - **运行时核心场景**
-  - `new_state/new_state.pde`：主入口草图，负责窗口/渲染模式初始化、音乐播放、时间系统、主角小马的跑/跳状态机，以及所有视觉层的 `update()/display()` 调度。
+  - `new_state/new_state.pde`：主入口草图，负责窗口/渲染模式初始化、音乐播放、时间系统、场景与事件分发，以及所有视觉层与小马控制器的统一调度。
   - `new_state/AnimationConfig.pde`：集中存放所有素材路径和数值参数（速度、缩放、生成间隔、位置等），是全局配置中心。
-- **动画层/特效模块**
+- **动画层/特效模块 & 控制器**
   - `new_state/CloudLayer.pde`：云层系统。
   - `new_state/MountainLayer.pde`：山峰与山云系统。
   - `new_state/DenglongManager.pde`：灯笼装饰系统。
   - `new_state/StoneManager.pde`：石头障碍与自动起跳触发。
   - `new_state/GroundManager.pde`：透视滚动地面（mode7 风格）。
   - `new_state/MoneyEffect.pde`（在同目录）：金币/红包粒子特效。
+  - `new_state/PonyController.pde`：小马跑步/跳跃控制器，实现基于音乐时间的 FSM 与测试时间线。
 
 参考动画示例（不直接参与主场景）：
 

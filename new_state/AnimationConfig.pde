@@ -86,13 +86,17 @@ final float MONEY_FADE_TIME = 3;
 final float MONEY_BASE_SCALE = 0.08;
 
 // ==================== 地面配置 ====================
-// 地面使用透视效果，梯形视图
-final String GROUND_PATH = "../assets/ground/ground.png";
-final float GROUND_SPEED = 600.0;  // 提高速度让效果更明显
-final float GROUND_Y = 530;
-final float GROUND_SCALE = 0.3;
-final float GROUND_TOP_SCALE = 0.15;  // 顶部缩放（远端）
-final int GROUND_TILE_COUNT = 6;  // 增加图块数量
+// 地面使用平行四边形视图 + 无缝滚动
+// 注意：GROUND_PATH 可以指向 data/floor.png 或 assets 里的任意纹理
+final String GROUND_PATH = "../data/floor.png";
+// 地面滚动速度（像素/秒，向左移动）
+final float GROUND_SPEED = 600.0;
+// 地面底边所在的屏幕高度（像素）
+final float GROUND_Y = 560;
+// 地面高度相对于屏幕高度的比例（0~1）
+final float GROUND_HEIGHT_RATIO = 0.30;
+// 平行四边形顶部相对于底部的水平偏移比例（0~0.5 越大越“透视”）
+final float GROUND_SLANT_FACTOR = 0.18;
 
 // ==================== 小马配置 ====================
 final float PONY_X = 400;  // 居中

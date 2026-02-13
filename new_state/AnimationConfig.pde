@@ -86,17 +86,22 @@ final float MONEY_FADE_TIME = 3;
 final float MONEY_BASE_SCALE = 0.08;
 
 // ==================== 地面配置 ====================
-// 地面使用平行四边形视图 + 无缝滚动
-// 注意：GROUND_PATH 可以指向 data/floor.png 或 assets 里的任意纹理
-final String GROUND_PATH = "../data/floor.png";
-// 地面滚动速度（像素/秒，向左移动）
-final float GROUND_SPEED = 600.0;
+// ==================== 地面配置 ====================
+// floor2.png 在 new_state/data 目录下
+final String GROUND_PATH = "../assets/ground/floor2.png";
+
+// 地面滚动速度（像素/秒，向左）
+final float GROUND_SPEED = 200.0;
+
 // 地面底边所在的屏幕高度（像素）
-final float GROUND_Y = 560;
-// 地面高度相对于屏幕高度的比例（0~1）
-final float GROUND_HEIGHT_RATIO = 0.30;
-// 平行四边形顶部相对于底部的水平偏移比例（0~0.5 越大越“透视”）
-final float GROUND_SLANT_FACTOR = 0.18;
+final float GROUND_Y = 600;
+
+// 把 556 像素高压缩成屏幕上的 270 像素高
+final float GROUND_PARALLELOGRAM_HEIGHT = 250;
+
+// 顶边相对底边水平偏移多少像素（决定平行四边形斜的程度，可以慢慢调）
+final float GROUND_TILT_DEG = 25.0;
+final float GROUND_SLANT_PIXELS = 300.0;
 
 // ==================== 小马配置 ====================
 final float PONY_X = 400;  // 居中

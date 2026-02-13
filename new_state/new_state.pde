@@ -3,7 +3,7 @@ import java.util.ArrayList;
 
 // ==================== 全局配置 ====================
 String folderName = "C:/Users/Admin/Documents/Processing/project/project-pony/output";
-String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/data/马年可爱风.mp3";
+String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/assets/song/马年可爱风.mp3";
 
 // ==================== 小马动画参数 ====================
 String runPrefix = "/run-v4/run-v4_";

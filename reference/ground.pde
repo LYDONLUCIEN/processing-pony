@@ -24,7 +24,7 @@ void setup() {
   textureMode(NORMAL);  // 关键：使用0-1的纹理坐标
   
   // 加载素材
-  groundImg = loadImage("ground.png");
+  groundImg = loadImage("C:/Users/Admin/Documents/Processing/project/project-pony/assets/ground/floor.png");
   if (groundImg == null) {
     groundImg = createBrickTexture(800, 200);
     println("使用测试纹理");

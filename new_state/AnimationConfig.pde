@@ -13,36 +13,43 @@ final String CLOUD_PATH_PREFIX = "../assets/cloud/cd";
 final String CLOUD_PATH_SUFFIX = ".png";
 final int CLOUD_COUNT = 5;
 
-final int CLOUD_MIN_CLOUDS = 2;
-final int CLOUD_MAX_CLOUDS = 4;
-final float CLOUD_MIN_SCALE = 0.35;
-final float CLOUD_MAX_SCALE = 0.55;
-final float CLOUD_MIN_Y = 30;
-final float CLOUD_MAX_Y = 180;
-final float CLOUD_SPEED = 3.0;
+final int CLOUD_MIN_CLOUDS = 1;
+final int CLOUD_MAX_CLOUDS = 2;
+final float CLOUD_MIN_SCALE = 0.25;
+final float CLOUD_MAX_SCALE = 0.35;
+final float CLOUD_MIN_Y = 50;
+final float CLOUD_MAX_Y = 250;
+final float CLOUD_SPEED = 0.2;
 final int CLOUD_ALPHA = 180;
+// 每 800×200 区域最多云朵数，越大越密
+final float CLOUD_REGION_WIDTH = 800;
+final float CLOUD_REGION_HEIGHT = 200;
+final int CLOUD_MAX_PER_REGION = 3;
+// 云朵生成间隔（秒），越大越稀疏
+final float CLOUD_SPAWN_INTERVAL_MIN = 5.0;
+final float CLOUD_SPAWN_INTERVAL_MAX = 10.0;
 
 // ==================== 山层配置 ====================
-final String MOUNTAIN_PATH_PREFIX = "../assets/mountain/mt";
-final String MOUNTAIN_PATH_SUFFIX = ".png";
-final int MOUNTAIN_COUNT = 3;
+// 单张 final-all.png，与 floor 相同逻辑：双块无缝滚动（mountain 目录只使用此素材）
+final String MOUNTAIN_PATH = "../assets/mountain/finall-all.png";
 
-final String MOUNTAIN_CLOUD_PATH_PREFIX = "../assets/mountain/mt-cloud";
-final String MOUNTAIN_CLOUD_PATH_SUFFIX = ".png";
-final int MOUNTAIN_CLOUD_COUNT = 3;
+final float MOUNTAIN_SCALE = 0.65;
+final float MOUNTAIN_BASE_Y = 320;
+final float MOUNTAIN_SPEED = 10.0;
+// 山图加载后最大宽度（像素），超大图会先缩放到此再上传，保证性能
+final int MOUNTAIN_MAX_TEXTURE_WIDTH = 2400;
 
-final int MOUNTAIN_MIN_MOUNTAINS = 1;  // 改为1，只显示一个山峰
-final int MOUNTAIN_MAX_MOUNTAINS = 1;
-final float MOUNTAIN_MIN_SCALE = 0.4;  // 增大一些
-final float MOUNTAIN_MAX_SCALE = 0.6;
-final float MOUNTAIN_BASE_Y = 400;  // 固定高度
-final float MOUNTAIN_SPEED = 10.0;  // 放慢速度
-
-final int MOUNTAIN_MIN_MT_CLOUDS = 1;
-final int MOUNTAIN_MAX_MT_CLOUDS = 2;
-final float MOUNTAIN_MT_CLOUD_MIN_SCALE = 0.6;
-final float MOUNTAIN_MT_CLOUD_MAX_SCALE = 0.6;
-final float MOUNTAIN_MT_CLOUD_SPEED = 30.0;
+// ==================== 路边近景配置（花朵 + 栏杆） ====================
+// 花朵：floor 与 mountain 接缝处；栏杆：在花朵前
+final String ROADSIDE_FLOWER_PATH = "../assets/roadside/flower.png";
+final String ROADSIDE_RAILING_PATH = "../assets/roadside/finall-lg.png";
+final float ROADSIDE_FLOWER_SCALE = 0.36;
+final float ROADSIDE_FLOWER_BASE_Y = 480;
+final float ROADSIDE_FLOWER_SPEED = 180.0;
+final float ROADSIDE_RAILING_SCALE = 0.5;
+final float ROADSIDE_RAILING_BASE_Y = 480;
+final float ROADSIDE_RAILING_SPEED = 180.0;
+final int ROADSIDE_MAX_TEXTURE_WIDTH = 2400;
 
 // ==================== 灯笼配置 ====================
 final String DENGLONG_PATH_PREFIX = "../assets/denglong/dl";
@@ -96,12 +103,16 @@ final float GROUND_SPEED = 200.0;
 // 地面底边所在的屏幕高度（像素）
 final float GROUND_Y = 600;
 
-// 把 556 像素高压缩成屏幕上的 270 像素高
+// 屏幕上平行四边形的高度（像素）
 final float GROUND_PARALLELOGRAM_HEIGHT = 250;
+// 地面图加载后最大宽度（像素），超大图会先缩放到此再使用
+final int GROUND_MAX_TEXTURE_WIDTH = 2400;
 
-// 顶边相对底边水平偏移多少像素（决定平行四边形斜的程度，可以慢慢调）
+// 平行四边形倾斜：顶边相对底边向右偏移
+// 方式一：用角度，slantPx = heightPx * tan(GROUND_TILT_DEG)
 final float GROUND_TILT_DEG = 25.0;
-final float GROUND_SLANT_PIXELS = 300.0;
+// 方式二：若 > 0 则直接使用像素值，忽略 GROUND_TILT_DEG（方便调参）
+final float GROUND_SLANT_PIXELS = 0;
 
 // ==================== 小马配置 ====================
 final float PONY_X = 400;  // 居中

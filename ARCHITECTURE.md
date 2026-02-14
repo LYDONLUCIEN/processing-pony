@@ -13,6 +13,7 @@
   - `new_state/DenglongManager.pde`：灯笼装饰系统。
   - `new_state/StoneManager.pde`：石头障碍与自动起跳触发。
   - `new_state/GroundManager.pde`：透视滚动地面（mode7 风格）。
+  - `new_state/RoadsideLayer.pde`：路边近景层（花盆/草丛/树木 预留）。
   - `new_state/MoneyEffect.pde`（在同目录）：金币/红包粒子特效。
   - `new_state/PonyController.pde`：小马跑步/跳跃控制器，实现基于音乐时间的 FSM 与测试时间线。
 
@@ -88,6 +89,12 @@ drawPony(currentDisplayFrame);
 moneyEffect.display();
 ```
 
+**图层绘制顺序（由远到近）**：石头最上层（遮蔽小马跑步阴影），小马其次，路边近景（花盆/草丛/树木 预留）位于地面之上、小马之下，地面高于山脉。
+
+```
+云 → 山 → 地面 → 路边近景 → 灯笼 → 小马 → 石头 → 金币特效
+```
+
 主要模块职责（简化）：
 
 - **CloudLayer**
@@ -106,6 +113,9 @@ moneyEffect.display();
   - 可以配置自动起跳开关（`autoJumpEnabled`），并对外暴露 `getStones()`、`getCount()` 进行调试或高级玩法扩展。
 - **GroundManager**
   - 使用 `beginShape(QUAD_STRIP)` + `texture(groundImage)` + 多段纵向切片模拟透视地面。
+- **RoadsideLayer**（预留）
+  - 路边近景层，位于地面之上、小马之下，衔接更自然。
+  - 可扩展：花盆、草丛、树木等素材，配置见 `AnimationConfig.pde` 注释。
   - 通过 `scrollOffset` 驱动 X 方向纹理坐标滚动，实现无缝地面移动。
   - `stripCount` 越大画面越平滑，但 GPU 顶点提交量增加。
 

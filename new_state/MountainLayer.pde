@@ -1,188 +1,96 @@
 // ==================== 山层系统 ====================
-// 负责管理中景的山峰和山云，移动速度比云层快
-
-class Mountain {
-  PImage img;
-  float x, y;
-  float scale;
-  float speed;
-
-  Mountain(PImage img, float x, float y, float scale, float speed) {
-    this.img = img;
-    this.x = x;
-    this.y = y;
-    this.scale = scale;
-    this.speed = speed;
-  }
-
-  void update(float dt) {
-    x -= speed * dt;
-  }
-
-  void display() {
-    pushMatrix();
-    translate(x, y);
-    scale(scale);
-    imageMode(CENTER);
-    image(img, 0, 0);
-    popMatrix();
-  }
-
-  boolean isOffScreen() {
-    return x < -img.width * scale;
-  }
-}
-
-class MountainCloud {
-  PImage img;
-  float x, y;
-  float scale;
-  float speed;
-
-  MountainCloud(PImage img, float x, float y, float scale, float speed) {
-    this.img = img;
-    this.x = x;
-    this.y = y;
-    this.scale = scale;
-    this.speed = speed;
-  }
-
-  void update(float dt) {
-    x -= speed * dt;
-  }
-
-  void display() {
-    pushMatrix();
-    translate(x, y);
-    scale(scale);
-    imageMode(CENTER);
-    tint(255, 220);
-    image(img, 0, 0);
-    noTint();
-    popMatrix();
-  }
-
-  boolean isOffScreen() {
-    return x < -img.width * scale;
-  }
-}
+// 与 floor 相同逻辑：单张 final-all.png，双块无缝滚动，固定慢速向左
+// mountain 目录下只使用 final-all.png
 
 class MountainLayer {
-  ArrayList<Mountain> mountains;
-  ArrayList<MountainCloud> mountainClouds;
-  PImage[] mountainImages;
-  PImage[] mountainCloudImages;
-  float mtCloudSpawnTimer = 0;
+  PImage mountainImg;
+  float mountainWidthPx;  // 屏幕上每块山的宽度 = 原图宽 * scale
+  float speed;
+  MountainBlock block1;
+  MountainBlock block2;
 
   MountainLayer() {
-    mountains = new ArrayList<Mountain>();
-    mountainClouds = new ArrayList<MountainCloud>();
-    loadMountainImages();
-    spawnInitialMountains();
-    spawnInitialMountainClouds();
-  }
-
-  void loadMountainImages() {
-    mountainImages = new PImage[MOUNTAIN_COUNT];
-    for (int i = 0; i < MOUNTAIN_COUNT; i++) {
-      String path = MOUNTAIN_PATH_PREFIX + (i + 1) + MOUNTAIN_PATH_SUFFIX;
-      PImage original = loadImage(path);
-
-      // 预先缩放以提高性能
-      int targetWidth = (int)(original.width * 0.5);
-      int targetHeight = (int)(original.height * 0.5);
-      original.resize(targetWidth, targetHeight);
-
-      mountainImages[i] = original;
+    loadMountainImage();
+    if (mountainImg != null && mountainImg.width > 0) {
+      mountainWidthPx = mountainImg.width * MOUNTAIN_SCALE;
+    } else {
+      mountainWidthPx = 1000;
     }
+    speed = MOUNTAIN_SPEED;
+    block1 = new MountainBlock(0);
+    block2 = new MountainBlock(mountainWidthPx);
+  }
 
-    mountainCloudImages = new PImage[MOUNTAIN_CLOUD_COUNT];
-    for (int i = 0; i < MOUNTAIN_CLOUD_COUNT; i++) {
-      String path = MOUNTAIN_CLOUD_PATH_PREFIX + (i + 1) + MOUNTAIN_CLOUD_PATH_SUFFIX;
-      PImage original = loadImage(path);
-
-      int targetWidth = (int)(original.width * 0.5);
-      int targetHeight = (int)(original.height * 0.5);
-      original.resize(targetWidth, targetHeight);
-
-      mountainCloudImages[i] = original;
+  void loadMountainImage() {
+    mountainImg = loadImage(MOUNTAIN_PATH);
+    if (mountainImg != null) {
+      int w = mountainImg.width;
+      int h = mountainImg.height;
+      if (w > MOUNTAIN_MAX_TEXTURE_WIDTH) {
+        int newH = (int)((float)h * MOUNTAIN_MAX_TEXTURE_WIDTH / w);
+        mountainImg.resize(MOUNTAIN_MAX_TEXTURE_WIDTH, newH);
+        println("Mountain image loaded and resized to: " + mountainImg.width + "x" + mountainImg.height + " (from " + w + "x" + h + ")");
+      } else {
+        println("Mountain image loaded: " + w + "x" + h);
+      }
+    } else {
+      println("ERROR: Failed to load mountain from: " + MOUNTAIN_PATH);
     }
-  }
-
-  void spawnInitialMountains() {
-    // 只生成一个山峰
-    int imgIndex = (int)random(mountainImages.length);
-    PImage img = mountainImages[imgIndex];
-    float scale = random(MOUNTAIN_MIN_SCALE, MOUNTAIN_MAX_SCALE);
-    float x = 800 + img.width;  // 从屏幕右侧开始
-    float y = MOUNTAIN_BASE_Y;  // 固定高度
-    float speed = MOUNTAIN_SPEED;
-
-    mountains.add(new Mountain(img, x, y, scale, speed));
-  }
-
-  void spawnInitialMountainClouds() {
-    int count = (int)random(MOUNTAIN_MIN_MT_CLOUDS, MOUNTAIN_MAX_MT_CLOUDS + 1);
-
-    for (int i = 0; i < count; i++) {
-      spawnMountainCloud(random(800));
-    }
-  }
-
-  void spawnMountain(float startX) {
-    int imgIndex = (int)random(mountainImages.length);
-    PImage img = mountainImages[imgIndex];
-    float scale = random(MOUNTAIN_MIN_SCALE, MOUNTAIN_MAX_SCALE);
-    float y = MOUNTAIN_BASE_Y;  // 固定高度
-    float speed = MOUNTAIN_SPEED;
-
-    mountains.add(new Mountain(img, startX, y, scale, speed));
-  }
-
-  void spawnMountainCloud(float startX) {
-    int imgIndex = (int)random(mountainCloudImages.length);
-    PImage img = mountainCloudImages[imgIndex];
-    float scale = random(MOUNTAIN_MT_CLOUD_MIN_SCALE, MOUNTAIN_MT_CLOUD_MAX_SCALE);
-    float y = random(200, 350);
-    float speed = MOUNTAIN_MT_CLOUD_SPEED * random(0.9, 1.1);
-
-    mountainClouds.add(new MountainCloud(img, startX, y, scale, speed));
   }
 
   void update(float dt) {
-    // 更新山峰（只保持一个）
-    for (int i = mountains.size() - 1; i >= 0; i--) {
-      Mountain m = mountains.get(i);
-      m.update(dt);
-      if (m.isOffScreen()) {
-        mountains.remove(i);
-        // 当山峰离开屏幕后，在右侧生成新的
-        spawnMountain(800 + random(0, 100));
-      }
+    if (mountainImg != null) {
+      block1.update(dt);
+      block2.update(dt);
+      checkAndSwap(block1, block2);
+      checkAndSwap(block2, block1);
     }
+  }
 
-    mtCloudSpawnTimer += dt;
-    if (mtCloudSpawnTimer >= random(3.0, 6.0)) {
-      spawnMountainCloud(800 + 50);
-      mtCloudSpawnTimer = 0;
-    }
-
-    for (int i = mountainClouds.size() - 1; i >= 0; i--) {
-      MountainCloud mc = mountainClouds.get(i);
-      mc.update(dt);
-      if (mc.isOffScreen()) {
-        mountainClouds.remove(i);
-      }
+  void checkAndSwap(MountainBlock current, MountainBlock other) {
+    if (current.isFullyOffScreen()) {
+      current.resetToRightOf(other);
     }
   }
 
   void display() {
-    for (MountainCloud mc : mountainClouds) {
-      mc.display();
+    if (mountainImg != null) {
+      block1.display();
+      block2.display();
+    }
+  }
+
+  // ==================== MountainBlock：一块山（与 GroundBlock 同逻辑） ====================
+  class MountainBlock {
+    float x;  // 左边缘的 x
+
+    MountainBlock(float startX) {
+      x = startX;
     }
 
-    for (Mountain m : mountains) {
-      m.display();
+    void update(float dt) {
+      x -= speed * dt;
+    }
+
+    void display() {
+      if (mountainImg == null) return;
+      float halfW = mountainWidthPx * 0.5;
+      float centerX = x + halfW;
+      if (centerX + halfW < 0 || centerX - halfW > width) return;
+      pushMatrix();
+      translate(centerX, MOUNTAIN_BASE_Y);
+      scale(MOUNTAIN_SCALE);
+      imageMode(CENTER);
+      image(mountainImg, 0, 0);
+      popMatrix();
+    }
+
+    boolean isFullyOffScreen() {
+      return x + mountainWidthPx < 0;
+    }
+
+    void resetToRightOf(MountainBlock other) {
+      x = other.x + mountainWidthPx;
     }
   }
 }

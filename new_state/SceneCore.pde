@@ -145,6 +145,23 @@ class DenglongManagerObject extends SceneObject {
   }
 }
 
+// --- 路边近景层（预留：花盆、草丛、树木等，位于地面之上、小马之下） ---
+class RoadsideLayerObject extends SceneObject {
+  RoadsideLayer layer;
+
+  RoadsideLayerObject(RoadsideLayer layer) {
+    this.layer = layer;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (layer != null) layer.update(dt);
+  }
+
+  void draw() {
+    if (layer != null) layer.display();
+  }
+}
+
 class GroundManagerObject extends SceneObject {
   GroundManager manager;
 

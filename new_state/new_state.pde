@@ -43,6 +43,7 @@ DenglongManager denglongManager;
 StoneManager stoneManager;
 MoneyEffect moneyEffect;
 GroundManager groundManager;
+RoadsideLayer roadsideLayer;
 
 // ==================== 跳跃高度计算 ====================
 float getJumpHeight(float progress) {
@@ -54,7 +55,8 @@ float getJumpHeight(float progress) {
 }
 
 void setup() {
-  size(800, 600, P2D);  // 使用 P2D 渲染器以支持 texture()
+  // 使用默认 JAVA2D 渲染器，避免 P2D/OpenGL 在大图纹理上传时的 5 秒超时；JAVA2D 同样支持 texture()
+  size(800, 600);
   frameRate(60);
 
   runFrames = new PImage[runTotalFrames];
@@ -75,6 +77,7 @@ void setup() {
   stoneManager = new StoneManager();
   moneyEffect = new MoneyEffect();
   groundManager = new GroundManager();
+  roadsideLayer = new RoadsideLayer();
 
   song = new SoundFile(this, musicFile);
   song.loop();
@@ -87,13 +90,15 @@ void setup() {
   // 小马控制器（基于音乐时间驱动的跑/跳 FSM）
   pony = new PonyController(runFrames, jumpFrames, bpm, beatsPerRunCycle, beatsForRemainingJump);
 
-  // 将各个图层包装成 SceneObject，按从远到近的顺序加入
+  // 图层顺序（从远到近）：云 → 山 → 地面 → 路边近景 → 灯笼 → 小马 → 石头 → 金币特效
+  // 石头在最上层，遮蔽小马跑步的阴影
   mainScene.add(new CloudLayerObject(cloudLayer));          // 最远：云
   mainScene.add(new MountainLayerObject(mountainLayer));    // 中景：山
-  mainScene.add(new DenglongManagerObject(denglongManager));// 装饰：灯笼
   mainScene.add(new GroundManagerObject(groundManager));    // 近景：地面
-  mainScene.add(new StoneManagerObject(stoneManager));      // 前景：石头障碍
+  mainScene.add(new RoadsideLayerObject(roadsideLayer));    // 路边近景（花盆/草丛/树木 预留）
+  mainScene.add(new DenglongManagerObject(denglongManager));// 装饰：灯笼
   mainScene.add(pony);                                      // 主角小马
+  mainScene.add(new StoneManagerObject(stoneManager));      // 最前：石头（遮蔽小马阴影）
   mainScene.add(new MoneyEffectObject(moneyEffect));        // 前景：金币红包特效
 
   // 注册需要响应整拍事件的对象
@@ -149,12 +154,15 @@ void draw() {
   if (mainScene != null) {
     mainScene.drawAll();
   } else {
-    // 容错：如果场景未初始化，退回旧的绘制方式
+    // 容错：如果场景未初始化，按图层顺序绘制
     cloudLayer.display();
     mountainLayer.display();
-    denglongManager.display();
     groundManager.display();
+    if (roadsideLayer != null) roadsideLayer.display();
+    denglongManager.display();
+    if (pony != null) pony.draw();
     stoneManager.display();
+    moneyEffect.display();
   }
 
   // 小马与金币特效已经挂在 Scene 中，这里只负责调试 UI
@@ -167,7 +175,9 @@ void draw() {
 void drawBackground() {
   background(240);
   imageMode(CORNER);
-  image(backgroundImage, 0, 0, width, height);
+  if (backgroundImage != null) {
+    image(backgroundImage, 0, 0, width, height);
+  }
 }
 
 void drawPony(PImage img) {

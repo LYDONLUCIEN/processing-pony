@@ -1,10 +1,11 @@
 // ==================== 地面滚动系统 ====================
 // GroundManager.pde - floor2.png 平行四边形双块滚动
 //
-// 行为：
-// - 把 floor2.png 当作 5060x556 的矩形，在屏幕上画成一个高度固定（270 像素）的平行四边形。
-// - 上下两条边都是水平的，图片里的水平线仍然是水平的，只是轮廓被剪成平行四边形。
-// - 使用两块 GroundBlock 首尾拼接，简单水平滑动实现无限地面。
+// 几何与旧版 P2D texture+QUADS 完全一致：
+//   底边：(x, groundY) — (x+widthPx, groundY)
+//   顶边：(x+slantPx, groundY-heightPx) — (x+widthPx+slantPx, groundY-heightPx)
+//   slantPx = 顶边相对底边向右偏移（由 GROUND_TILT_DEG 或 GROUND_SLANT_PIXELS 决定）
+// JAVA2D 下用 shearX 实现上述平行四边形，再贴图。
 
 class GroundManager {
   PImage groundImg;
@@ -31,9 +32,13 @@ class GroundManager {
     widthPx  = groundImg.width;
     speed    = GROUND_SPEED;
 
-    // 用角度控制剪切量：slantPx = heightPx * tan(θ)
-    float tiltRad = radians(GROUND_TILT_DEG);
-    slantPx = heightPx * tan(tiltRad);
+    // 与旧版一致：优先用像素值，否则用角度 slantPx = heightPx * tan(GROUND_TILT_DEG)
+    if (GROUND_SLANT_PIXELS > 0) {
+      slantPx = GROUND_SLANT_PIXELS;
+    } else {
+      float tiltRad = radians(GROUND_TILT_DEG);
+      slantPx = heightPx * tan(tiltRad);
+    }
 
     block1 = new GroundBlock(0);
     block2 = new GroundBlock(widthPx);
@@ -41,14 +46,21 @@ class GroundManager {
     println("Ground initialized: tex=" + groundImg.width + "x" + groundImg.height +
             " screen=" + widthPx + "x" + heightPx +
             " y=" + groundY + " slantPx=" + slantPx +
-            " tiltDeg=" + GROUND_TILT_DEG +
-            " speed=" + speed);
+            " (tune: GROUND_TILT_DEG or GROUND_SLANT_PIXELS) speed=" + speed);
   }
 
   void loadGroundImage() {
     groundImg = loadImage(GROUND_PATH);
     if (groundImg != null) {
-      println("Ground image loaded: " + groundImg.width + "x" + groundImg.height);
+      int w = groundImg.width;
+      int h = groundImg.height;
+      if (w > GROUND_MAX_TEXTURE_WIDTH) {
+        int newH = (int)((float)h * GROUND_MAX_TEXTURE_WIDTH / w);
+        groundImg.resize(GROUND_MAX_TEXTURE_WIDTH, newH);
+        println("Ground image loaded and resized to: " + groundImg.width + "x" + groundImg.height + " (from " + w + "x" + h + ")");
+      } else {
+        println("Ground image loaded: " + w + "x" + h);
+      }
     }
   }
 
@@ -73,10 +85,8 @@ class GroundManager {
       return;
     }
 
-    textureMode(NORMAL);
+    // JAVA2D 下用 shearX 做平行四边形变形（原 texture+QUADS 仅在 P2D 有效）
     noStroke();
-    fill(255);
-
     block1.display();
     block2.display();
   }
@@ -101,35 +111,21 @@ class GroundManager {
     }
 
     void display() {
-      // 粗略裁剪：如果整块都在屏幕右边或左边很远，就不画
+      // 与旧版一致：可见范围左缘 x，右缘 x+widthPx+slantPx
       if (x > width || x + widthPx + slantPx < 0) return;
 
-      beginShape();
-      texture(groundImg);
-
-      // 屏幕坐标：
-      // 底边： (x, groundY) -> (x + widthPx,       groundY)
-      // 顶边： (x + slantPx, groundY - heightPx) -> (x + widthPx + slantPx, groundY - heightPx)
-
-      float bx = x;
-      float by = groundY;
-
-      // 左下：u=0, v=1
-      vertex(bx,               by,              0, 1);
-      // 右下：u=1, v=1
-      vertex(bx + widthPx,     by,              1, 1);
-      // 右上：u=1, v=0
-      vertex(bx + widthPx + slantPx, by - heightPx, 1, 0);
-      // 左上：u=0, v=0
-      vertex(bx + slantPx,     by - heightPx,   0, 0);
-
-      endShape(CLOSE);
+      pushMatrix();
+      translate(x, groundY);  // 原点 = 底边左下角，y 向下为正（Processing 默认）
+      // shearX(angle): x' = x + y*tan(angle)。令 (0,-heightPx) → (slantPx,-heightPx) 得 tan(angle)=-slantPx/heightPx
+      shearX(atan(-slantPx / heightPx));
+      imageMode(CORNER);
+      image(groundImg, 0, -heightPx, widthPx, heightPx);  // 矩形贴图，剪切后即平行四边形
+      popMatrix();
     }
 
-    // 完全离开左侧：右上角的 x 也小于 0 时
+    // 完全离开左侧：平行四边形右缘移出屏幕
     boolean isFullyOffScreen() {
-      float rightMostX = x + widthPx + slantPx;
-      return rightMostX < 0;
+      return x + widthPx + slantPx < 0;
     }
 
     // 把当前块重置到 other 的右边，保证无缝衔接

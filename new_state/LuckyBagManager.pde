@@ -1,20 +1,38 @@
-// ==================== 福袋管理器 ====================
-// 按时间轴生成福袋，检测小马头顶碰撞，触发顶飞 + 字弹出
+// ==================== 福袋/礼物盒管理器 ====================
+// 按时间轴生成，检测小马头顶碰撞，触发顶飞/分离 + 字与精灵弹出
 
 class LuckyBagManager {
   ArrayList<LuckyBag> bags;
+  ArrayList<GiftBox> giftBoxes;
   PImage bagImage;
+  PImage boxHeadImage;
+  PImage boxBodyImage;
   int nextTimelineIndex;
   float lastSpawnTime;
   float spawnInterval;
 
   LuckyBagManager() {
     bags = new ArrayList<LuckyBag>();
+    giftBoxes = new ArrayList<GiftBox>();
     bagImage = loadImage(LUCKY_BAG_IMAGE_PATH);
     if (bagImage != null && bagImage.width > 400) {
       int w = 400;
       int h = (int)((float)bagImage.height * w / bagImage.width);
       bagImage.resize(w, h);
+    }
+    if (USE_GIFT_BOX) {
+      boxHeadImage = loadImage(GIFT_BOX_HEAD_PATH);
+      boxBodyImage = loadImage(GIFT_BOX_BODY_PATH);
+      if (boxHeadImage != null && boxHeadImage.width > 400) {
+        int w = 400;
+        int h = (int)((float)boxHeadImage.height * w / boxHeadImage.width);
+        boxHeadImage.resize(w, h);
+      }
+      if (boxBodyImage != null && boxBodyImage.width > 400) {
+        int w = 400;
+        int h = (int)((float)boxBodyImage.height * w / boxBodyImage.width);
+        boxBodyImage.resize(w, h);
+      }
     }
     nextTimelineIndex = 0;
     lastSpawnTime = -999;
@@ -28,45 +46,69 @@ class LuckyBagManager {
     for (int i = bags.size() - 1; i >= 0; i--) {
       LuckyBag bag = bags.get(i);
       bag.update(dt);
-
       if (ponyIsJumping && bag.collidesWith(ponyHeadX, ponyHeadY)) {
         bag.onHit(ponyHeadX, ponyHeadY);
         String phrase = getBlessingPhrase(bag.getType());
         PImage asset = loadBlessingAsset(bag.getType());
         spawnBouncyWord(phrase, bag.getBagX(), bag.getBagY() - 60, asset);
+        spawnBlessingSprite(bag.getType(), bag.getBagX(), bag.getBagY() - 40);
         println("[Blessing] Hit lucky bag: " + bag.getType() + " -> " + phrase);
       }
-
       if (bag.isDone()) bags.remove(i);
+    }
+
+    for (int i = giftBoxes.size() - 1; i >= 0; i--) {
+      GiftBox box = giftBoxes.get(i);
+      box.update(dt);
+      if (ponyIsJumping && box.collidesWith(ponyHeadX, ponyHeadY)) {
+        box.onHit(ponyHeadX, ponyHeadY);
+        String phrase = getBlessingPhrase(box.getType());
+        PImage asset = loadBlessingAsset(box.getType());
+        spawnBouncyWord(phrase, box.getBagX(), box.getBagY() + GIFT_BOX_PHRASE_Y_OFFSET, asset);
+        spawnBlessingSpriteFromBox(box.getType(), box.getBagX(), box.getBagY());
+        println("[Blessing] Hit gift box: " + box.getType() + " -> " + phrase);
+      }
+      if (box.isDone()) giftBoxes.remove(i);
     }
   }
 
   void spawnFromTimeline(float musicTime) {
     JSONArray arr = getTimelineLuckyBags();
+    float leadTime = getBlessingSpawnLeadTime();
     while (nextTimelineIndex < arr.size()) {
       JSONObject ev = arr.getJSONObject(nextTimelineIndex);
       float t = ev.getFloat("time");
-      if (musicTime < t) break;
+      if (musicTime < t - leadTime) break;
       String type = ev.getString("type");
-      spawnBag(type);
+      float startX = PONY_X + FORGE_SPEED * (t - musicTime);
+      if (USE_GIFT_BOX) spawnGiftBox(type, startX);
+      else spawnBag(type, startX);
       nextTimelineIndex++;
     }
   }
 
-  void spawnBag(String type) {
+  void spawnBag(String type, float startX) {
     if (bagImage == null) return;
     float stringLen = random(LUCKY_BAG_STRING_LENGTH_MIN, LUCKY_BAG_STRING_LENGTH_MAX);
     float anchorY = LUCKY_BAG_ANCHOR_Y;
-    float startX = width + 80;
     LuckyBag bag = new LuckyBag(bagImage, startX, anchorY, stringLen, LUCKY_BAG_SPEED, LUCKY_BAG_SCALE, type);
     bags.add(bag);
   }
 
-  void display() {
-    for (LuckyBag bag : bags) bag.display();
+  void spawnGiftBox(String type, float startX) {
+    if (boxHeadImage == null || boxBodyImage == null) return;
+    float stringLen = random(GIFT_BOX_STRING_LENGTH_MIN, GIFT_BOX_STRING_LENGTH_MAX);
+    float anchorY = GIFT_BOX_ANCHOR_Y;
+    GiftBox box = new GiftBox(boxHeadImage, boxBodyImage, startX, anchorY, stringLen, GIFT_BOX_SPEED, GIFT_BOX_SCALE, type);
+    giftBoxes.add(box);
   }
 
-  int getCount() { return bags.size(); }
+  void display() {
+    for (LuckyBag bag : bags) bag.display();
+    for (GiftBox box : giftBoxes) box.display();
+  }
+
+  int getCount() { return bags.size() + giftBoxes.size(); }
 }
 
 PImage loadBlessingAsset(String type) {

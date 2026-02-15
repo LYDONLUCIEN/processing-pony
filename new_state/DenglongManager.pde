@@ -22,6 +22,7 @@ class Denglong {
   }
 
   void display() {
+    if (img == null || img.width <= 0) return;
     pushMatrix();
     translate(x, y);
     scale(scale);
@@ -31,7 +32,7 @@ class Denglong {
   }
 
   boolean isOffScreen() {
-    return x < -img.width * scale;
+    return img == null || x < -img.width * scale;
   }
 
   float getRightEdge() {
@@ -58,19 +59,27 @@ class DenglongManager {
     for (int i = 0; i < DENGLONG_COUNT; i++) {
       String path = DENGLONG_PATH_PREFIX + (i + 1) + DENGLONG_PATH_SUFFIX;
       PImage original = loadImage(path);
-
-      // 预先缩放以提高性能
+      if (original == null || original.width <= 0) {
+        println("WARN: 灯笼图缺失或无法读取: " + path + "，请放入对应文件或减少 DENGLONG_COUNT");
+        denglongImages[i] = createImage(32, 32, ARGB);
+        denglongImages[i].loadPixels();
+        for (int k = 0; k < denglongImages[i].pixels.length; k++)
+          denglongImages[i].pixels[k] = color(200, 80, 80, 180);
+        denglongImages[i].updatePixels();
+        continue;
+      }
       int targetWidth = (int)(original.width * 0.4);
       int targetHeight = (int)(original.height * 0.4);
-      original.resize(targetWidth, targetHeight);
-
+      if (targetWidth > 0 && targetHeight > 0) original.resize(targetWidth, targetHeight);
       denglongImages[i] = original;
     }
   }
 
   void spawnDenglong() {
+    if (denglongImages == null || denglongImages.length == 0) return;
     int imgIndex = (int)random(denglongImages.length);
     PImage img = denglongImages[imgIndex];
+    if (img == null || img.width <= 0) return;
     float x = 800 + img.width * DENGLONG_SCALE / 2;
     float y = DENGLONG_BASE_Y + random(-20, 20);
     float scale = DENGLONG_SCALE;

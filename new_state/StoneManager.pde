@@ -71,10 +71,36 @@ class StoneManager {
   float nextSpawnInterval = STONE_SPAWN_INTERVAL;
   boolean autoJumpEnabled = true;
   int nextStoneTextIndex = 0;
+  int nextStoneTimelineIndex = 0;
 
   StoneManager() {
     stones = new ArrayList<Stone>();
     loadStoneImages();
+  }
+
+  void spawnFromTimeline(float musicTime) {
+    JSONArray arr = getTimelineStones();
+    if (arr.size() == 0) return;
+    float leadTime = getBlessingSpawnLeadTime();
+    while (nextStoneTimelineIndex < arr.size()) {
+      JSONObject ev = arr.getJSONObject(nextStoneTimelineIndex);
+      float t = ev.getFloat("time");
+      if (musicTime < t - leadTime) break;
+      int textIdx = ev.hasKey("textIndex") ? ev.getInt("textIndex") : (nextStoneTextIndex++ % max(1, stoneTexts.length));
+      float startX = PONY_X + FORGE_SPEED * (t - musicTime);
+      spawnOneStone(startX, textIdx, FORGE_SPEED);
+      nextStoneTimelineIndex++;
+    }
+  }
+
+  void spawnOneStone(float startX, int textIdx, float speed) {
+    if (stoneImages == null || stoneImages.length == 0) return;
+    int imgIndex = (int)random(stoneImages.length);
+    PImage img = stoneImages[imgIndex];
+    float y = STONE_BASE_Y;
+    float scale = STONE_SCALE;
+    int textIndex = textIdx % max(1, stoneTexts.length);
+    stones.add(new Stone(img, startX, y, scale, speed, imgIndex, textIndex));
   }
 
   void loadStoneImages() {
@@ -93,16 +119,10 @@ class StoneManager {
   }
 
   void spawnStone() {
-    int imgIndex = (int)random(stoneImages.length);
-    int textIdx = nextStoneTextIndex % 3;
+    float x = width + 80;
+    int textIdx = nextStoneTextIndex % max(1, stoneTexts.length);
     nextStoneTextIndex++;
-    PImage img = stoneImages[imgIndex];
-    float x = 800 + img.width * STONE_SCALE / 2;
-    float y = STONE_BASE_Y;
-    float scale = STONE_SCALE;
-    float speed = STONE_SPEED;
-
-    stones.add(new Stone(img, x, y, scale, speed, imgIndex, textIdx));
+    spawnOneStone(x, textIdx, STONE_SPEED);
   }
 
   boolean checkAutoJump(float ponyX) {
@@ -117,22 +137,24 @@ class StoneManager {
   }
 
   void update(float dt) {
+    update(dt, -1);
+  }
+
+  void update(float dt, float musicTime) {
     if (backgroundFrozen) return;
-    spawnTimer += dt;
-
-    if (spawnTimer >= nextSpawnInterval) {
-      spawnStone();
-      spawnTimer = 0;
-      nextSpawnInterval = STONE_SPAWN_INTERVAL * random(0.9, 1.3);
+    if (musicTime >= 0) spawnFromTimeline(musicTime);
+    if (getTimelineStones().size() == 0) {
+      spawnTimer += dt;
+      if (spawnTimer >= nextSpawnInterval) {
+        spawnStone();
+        spawnTimer = 0;
+        nextSpawnInterval = STONE_SPAWN_INTERVAL * random(0.9, 1.3);
+      }
     }
-
     for (int i = stones.size() - 1; i >= 0; i--) {
       Stone s = stones.get(i);
       s.update(dt);
-
-      if (s.isOffScreen()) {
-        stones.remove(i);
-      }
+      if (s.isOffScreen()) stones.remove(i);
     }
   }
 

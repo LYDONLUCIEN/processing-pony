@@ -70,6 +70,19 @@ class FirecrackerManager {
     firecrackers.add(new Firecracker(img, x, y, FIRECRACKER_SCALE, FIRECRACKER_SPEED, imgIndex));
   }
 
+  // 马到成功等时机：从右侧爆一簇鞭炮（若干枚同时进场）
+  void spawnBurst(int count) {
+    if (firecrackerImages == null || firecrackerImages.length == 0) return;
+    for (int i = 0; i < count; i++) {
+      int imgIndex = (int)random(firecrackerImages.length);
+      PImage img = firecrackerImages[imgIndex];
+      if (img == null || img.width <= 0) continue;
+      float x = width + 100 + i * 50 + random(-20, 20) + img.width * FIRECRACKER_SCALE / 2;
+      float y = FIRECRACKER_BASE_Y + random(-30, 30);
+      firecrackers.add(new Firecracker(img, x, y, FIRECRACKER_SCALE, FIRECRACKER_SPEED, imgIndex));
+    }
+  }
+
   void update(float dt) {
     if (backgroundFrozen) return;
 

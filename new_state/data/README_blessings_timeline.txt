@@ -1,33 +1,38 @@
 祝福时间轴配置文件说明
 ========================
 
-编辑 data/blessings_timeline.json 即可配置各种素材出现的时间（单位：音乐秒）。
+编辑 data/blessings_timeline.json 即可配置各种素材出现的时间（单位：音乐秒 = 小马动画播放时间）。
 
-一、如何配置时间轴
+一、时间含义（重要）
 -----------------
-1. 用记事本或编辑器打开 new_state/data/blessings_timeline.json
-2. 所有时间都是「音乐播放到第几秒」时触发
-3. 改完保存后，重新运行 sketch 生效
+  - luckyBags 和 stones 里的 "time" = 小马应在「最高点」撞击到该素材的音乐秒数。
+  - 程序会根据 FORGE_SPEED、PONY_X、起跳到最高点时间，自动计算：
+    1) 素材何时进场、放在哪一 x 位置；
+    2) 在 time - JUMP_APEX_TIME 触发起跳。
+  - 因此只需在 JSON 里写「撞击时刻」T，石头/福袋/礼物盒的进场位置和起跳时间都会自动算好。
 
 二、各项配置说明
 ---------------
 
-【福袋】luckyBags
+【福袋/礼物盒】luckyBags
   - 数组，每项 { "time": 秒数, "type": "money"|"fu"|"elephant" }
-  - 到达 time 秒时，从右侧进入一个福袋；顶到后弹出对应四字 + 素材
-  - money = 马上有钱 + money.png
-  - fu = 马上有福 + fu.png
-  - elephant = 马上有对象 + elephant.png
-  - 示例：{"time":5,"type":"money"} 表示第 5 秒出现「马上有钱」福袋
+  - time = 小马在最高点顶到该福袋/礼物盒的音乐秒数；进场位置与石头逻辑一致（由速度与 T 反推）
+  - money = 马上有钱，fu = 马上有福，elephant = 马上有对象
+
+【石头】stones（可选）
+  - 数组，每项 { "time": 秒数 (, "textIndex": 0|1|2 可选) }
+  - time = 小马在最高点跳过该石头的音乐秒数；进场位置与福袋/礼物盒同一套公式计算
+  - 若配置了 stones，则不再按间隔自动生成石头；若不配 stones，则仍按 stoneTextInterval 间隔生成
 
 【石头文案】stoneTexts
   - 数组，如 ["跨过坎坷", "跨过阻碍", "跨过了迷茫"]
-  - 小马跳过石头后，按顺序循环弹出这些字（不配图）
+  - 小马跳过石头后，按顺序（或 textIndex）弹出这些字（不配图）
 
 【其它祝福】otherAnimations
   - 数组，每项 { "time": 秒数, "type": "fly"|"success"|"jiji" }
   - 到达 time 秒时，在屏幕中央弹出四字 + 配套素材（若有）
-  - fly = 马上起飞, success = 马到成功, jiji = 马年大吉
+  - fly = 马上起飞；success = 马到成功（四字 + 手袋动画 + 鞭炮一簇）；jiji = 马年大吉
+  - 马到成功无跳跃/礼盒/石头，仅手袋与鞭炮
   - 示例：{"time":30,"type":"fly"} 表示第 30 秒弹出「马上起飞」
 
 【起扬】qiyangTime

@@ -2,6 +2,9 @@ import processing.sound.*;
 import java.util.ArrayList;
 
 // ==================== 全局配置 ====================
+// 设为 true 时运行测试草图（按键 1-0 触发效果），不加载音乐与场景
+boolean TEST_MODE = true;
+
 String folderName = "C:/Users/Admin/Documents/Processing/project/project-pony/output";
 String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/assets/song/马年大吉.wav";
 
@@ -56,10 +59,18 @@ MoneyEffect moneyEffect;
 GroundManager groundManager;
 RoadsideLayer roadsideLayer;
 LuckyBagManager luckyBagManager;
+BlessingSpriteManager blessingSpriteManager;
 int nextOtherAnimationIndex = 0;
+int nextJumpTriggerIndex = 0;
 boolean qiyangTriggered = false;
 boolean backgroundFrozen = false;  // 起扬到 qiyang_64 时置 true，所有背景速度归 0
 int currentBeatIndex = 0;         // 当前拍号，供灯笼/柱子/鞭炮按 beat 间隔生成
+
+// 娱乐模式：开口福袋光标，按住/划动爆金币
+boolean entertainmentMode = false;
+PImage entertainmentCursorImg = null;
+float lastEntertainSpawnX = -9999;
+float lastEntertainSpawnY = -9999;
 
 // ==================== 跳跃高度计算 ====================
 float getJumpHeight(float progress) {
@@ -70,11 +81,27 @@ float getJumpHeight(float progress) {
   return sin(jumpProgress * PI) * PONY_JUMP_HEIGHT;
 }
 
+// 福袋顶到后触发的精灵动画（小象/金钱/福等），由 LuckyBagManager 调用
+void spawnBlessingSprite(String type, float x, float y) {
+  if (blessingSpriteManager != null) blessingSpriteManager.spawn(type, x, y);
+}
+
+// 礼盒击中：从礼盒位置由小放大飞到小马背上（目标位置由 BlessingConfig 偏移决定）
+void spawnBlessingSpriteFromBox(String type, float boxX, float boxY) {
+  if (blessingSpriteManager != null) blessingSpriteManager.spawnFromBox(type, boxX, boxY, PONY_X, PONY_Y);
+}
+
 void setup() {
-  // 使用默认 JAVA2D 渲染器，避免 P2D/OpenGL 在大图纹理上传时的 5 秒超时；JAVA2D 同样支持 texture()
   size(800, 600);
   frameRate(60);
+  if (TEST_MODE) {
+    testSetup();
+    blessingSpriteManager = new BlessingSpriteManager();
+    blessingSpriteManager.loadSprites();
+    return;
+  }
 
+  // 使用默认 JAVA2D 渲染器，避免 P2D/OpenGL 在大图纹理上传时的 5 秒超时
   runFrames = new PImage[runTotalFrames];
   for (int i = 0; i < runTotalFrames; i++) {
     runFrames[i] = loadImage(folderName + runPrefix + nf(i, 2) + ".png");
@@ -104,6 +131,19 @@ void setup() {
   loadBlessingsTimeline();
   initBlessingFont();
   luckyBagManager = new LuckyBagManager();
+  blessingSpriteManager = new BlessingSpriteManager();
+
+  // 娱乐模式光标图（开口福袋），优先用专用图，否则用福袋图
+  entertainmentCursorImg = loadImage(ENTERTAINMENT_CURSOR_PATH);
+  if (entertainmentCursorImg == null || entertainmentCursorImg.width <= 0) {
+    entertainmentCursorImg = loadImage(LUCKY_BAG_IMAGE_PATH);
+  }
+  if (entertainmentCursorImg != null && entertainmentCursorImg.width > 0) {
+    int w = (int)ENTERTAINMENT_CURSOR_SIZE;
+    int h = (int)((float)entertainmentCursorImg.height * w / entertainmentCursorImg.width);
+    if (h > (int)(ENTERTAINMENT_CURSOR_SIZE * 1.5f)) h = (int)(ENTERTAINMENT_CURSOR_SIZE * 1.5f);
+    entertainmentCursorImg.resize(w, h);
+  }
 
   song = new SoundFile(this, musicFile);
   song.play();  // 不循环，音乐播完就结束
@@ -136,11 +176,15 @@ void setup() {
 }
 
 void draw() {
+  if (TEST_MODE) {
+    testDraw();
+    return;
+  }
+
   int currMillis = millis();
   float dt = (currMillis - prevMillis) / 1000.0;
   prevMillis = currMillis;
 
-  // 更新音乐时钟（无论是否暂停，都可以拿到当前位置）
   if (musicClock != null) {
     musicClock.update();
   }
@@ -174,13 +218,13 @@ void draw() {
       backgroundFrozen = true;
     }
 
-    // 石头自动跳跃：改为通知 PonyController，由其决定是否真正起跳
-    if (stoneManager.checkAutoJump(PONY_X) && pony != null) {
-      pony.requestJump();
-      println("[AUTO] Stone trigger jump at " + nf(animTime, 0, 2) + "s");
-    }
-
     float musicTime = (musicClock != null) ? musicClock.musicTime : animTime;
+    // 时间轴统一触发起跳：在撞击时刻 T 前 JUMP_APEX_TIME 秒起跳，T 时小马在最高点
+    while (nextJumpTriggerIndex < getTimelineHitTimeCount() && musicTime >= getTimelineHitTime(nextJumpTriggerIndex) - JUMP_APEX_TIME && pony != null) {
+      pony.requestJump();
+      println("[AUTO] Jump trigger for hit at " + nf(getTimelineHitTime(nextJumpTriggerIndex), 0, 2) + "s (musicTime " + nf(musicTime, 0, 2) + "s)");
+      nextJumpTriggerIndex++;
+    }
     float ponyHeadX = PONY_X;
     float ponyHeadY = PONY_Y - getJumpHeight(pony != null ? pony.getCurrentProgress() : 0);
     boolean ponyIsJumping = (pony != null && pony.getStateLabel().equals("JUMP"));
@@ -201,16 +245,27 @@ void draw() {
       if (musicTime < ev.getFloat("time")) break;
       String type = ev.getString("type");
       spawnBouncyWord(getBlessingPhrase(type), PONY_X, PONY_Y - 120, loadBlessingAsset(type));
+      if (type.equals("success")) {
+        if (blessingSpriteManager != null) blessingSpriteManager.spawn("shoudai", PONY_X + SHOUDAI_OFFSET_X, PONY_Y + SHOUDAI_OFFSET_Y);
+        if (firecrackerManager != null) firecrackerManager.spawnBurst(BLESSING_SUCCESS_FIRECRACKER_BURST_COUNT);
+      }
       nextOtherAnimationIndex++;
     }
 
-    if (!qiyangTriggered && musicTime >= getTimelineQiyangTime() && pony != null) {
+    // 起扬触发：时间轴指定时间 或 音乐结束前 N 秒，取较早者，避免音乐结束后小马卡住
+    float qiyangTriggerTime = getTimelineQiyangTime();
+    if (song != null && song.duration() > 0 && QIYANG_TRIGGER_SECONDS_BEFORE_END > 0) {
+      float triggerByEnd = song.duration() - QIYANG_TRIGGER_SECONDS_BEFORE_END;
+      if (triggerByEnd < qiyangTriggerTime) qiyangTriggerTime = triggerByEnd;
+    }
+    if (!qiyangTriggered && musicTime >= qiyangTriggerTime && pony != null) {
       pony.requestQiyang();
       qiyangTriggered = true;
-      println("[Timeline] Qiyang requested at " + nf(musicTime, 0, 2) + "s");
+      println("[Qiyang] triggered at " + nf(musicTime, 0, 2) + "s (trigger time " + nf(qiyangTriggerTime, 0, 2) + "s)");
     }
 
     updateBouncyWord(dt);
+    if (blessingSpriteManager != null) blessingSpriteManager.update(dt);
   }
 
   drawBackground();
@@ -231,11 +286,27 @@ void draw() {
 
   if (luckyBagManager != null) luckyBagManager.display();
   drawBouncyWord();
+  if (blessingSpriteManager != null) blessingSpriteManager.display();
 
   int frameIdx = pony != null ? pony.getCurrentFrameIndex() : 0;
   float prog = pony != null ? pony.getCurrentProgress() : 0;
   drawDebugUI(frameIdx, prog);
   drawTimeline();
+
+  // 娱乐模式：绘制开口福袋光标并隐藏系统光标
+  if (entertainmentMode) {
+    noCursor();
+    if (entertainmentCursorImg != null && entertainmentCursorImg.width > 0) {
+      imageMode(CENTER);
+      image(entertainmentCursorImg, mouseX, mouseY);
+    } else {
+      fill(255, 200, 0);
+      noStroke();
+      circle(mouseX, mouseY, ENTERTAINMENT_CURSOR_SIZE);
+    }
+  } else {
+    cursor();
+  }
 }
 
 void drawBackground() {
@@ -334,6 +405,14 @@ void drawDebugUI(int frameIdx, float prog) {
   text("粒子: " + moneyEffect.getParticleCount(), 10, y);
   y += dy;
 
+  if (entertainmentMode) {
+    fill(255, 220, 0);
+    text("娱乐模式: 开（按 E 关闭）", 10, y += dy);
+    text("按住/划动鼠标 = 爆金币红包", 10, y += dy);
+  } else {
+    text("按 E 开启娱乐模式（福袋光标+划动爆金币）", 10, y += dy);
+  }
+  y += dy;
   fill(255, 255, 0);
   text("按 T 切换 测试/手动 模式", 10, y += dy);
   text("按 P 暂停", 10, y += dy);
@@ -345,6 +424,14 @@ void drawDebugUI(int frameIdx, float prog) {
 }
 
 void keyPressed() {
+  if (TEST_MODE) {
+    testKeyPressed();
+    return;
+  }
+  if (key == 'e' || key == 'E') {
+    entertainmentMode = !entertainmentMode;
+    if (!entertainmentMode) cursor();
+  }
   if (key == ' ') {
     if (pony != null) pony.requestJump();
   }
@@ -380,8 +467,20 @@ void keyPressed() {
 }
 
 void mousePressed() {
-  if (pony != null && pony.isMouseOver(mouseX, mouseY)) {
+  if (entertainmentMode) {
+    moneyEffect.spawn(mouseX, mouseY);
+    lastEntertainSpawnX = mouseX;
+    lastEntertainSpawnY = mouseY;
+  } else if (pony != null && pony.isMouseOver(mouseX, mouseY)) {
     moneyEffect.spawn(PONY_X, PONY_Y);
     println("触发金币红包特效!");
+  }
+}
+
+void mouseDragged() {
+  if (entertainmentMode && dist(mouseX, mouseY, lastEntertainSpawnX, lastEntertainSpawnY) >= ENTERTAINMENT_SPAWN_STEP) {
+    moneyEffect.spawn(mouseX, mouseY);
+    lastEntertainSpawnX = mouseX;
+    lastEntertainSpawnY = mouseY;
   }
 }

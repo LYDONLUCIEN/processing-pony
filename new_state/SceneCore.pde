@@ -219,7 +219,7 @@ class StoneManagerObject extends SceneObject {
 
   void update(float dt, float musicTime, float beat) {
     if (manager != null) {
-      manager.update(dt);
+      manager.update(dt, musicTime);
     }
   }
 

@@ -3,7 +3,7 @@ import java.util.ArrayList;
 
 // ==================== 全局配置 ====================
 String folderName = "C:/Users/Admin/Documents/Processing/project/project-pony/output";
-String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/assets/song/马年可爱风.mp3";
+String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/assets/song/马年大吉.wav";
 
 // ==================== 小马动画参数 ====================
 String runPrefix = "/run-v4/run-v4_";
@@ -14,11 +14,20 @@ String jumpPrefix = "/jump-mid-v4/jump-mid-v4_";
 int jumpTotalFrames = 23;
 float beatsForRemainingJump = 3.0;
 
-float bpm = 125.0;
+String qiyangPrefix = "/qiyang/qiyang_";
+int qiyangTotalFrames = 169;
+int qiyangStartFrame = 14;   // 从第15张 qiyang_14.png 开始播
+int qiyangEndFrame = 64;     // 到达此帧时背景全部停
+int qiyangLoopStartFrame = 72;  // 第一遍播完后，从第73张 qiyang_72.png 开始循环播到结尾
+float qiyangLoopFPS = 12;       // 循环段播放帧率
+float beatsForQiyang = 20;
+
+float bpm = 129.0;
 
 // ==================== 小马状态 ====================
 PImage[] runFrames;
 PImage[] jumpFrames;
+PImage[] qiyangFrames;
 SoundFile song;
 PonyController pony;
 
@@ -40,10 +49,17 @@ PImage backgroundImage;
 CloudLayer cloudLayer;
 MountainLayer mountainLayer;
 DenglongManager denglongManager;
+PillarManager pillarManager;
+FirecrackerManager firecrackerManager;
 StoneManager stoneManager;
 MoneyEffect moneyEffect;
 GroundManager groundManager;
 RoadsideLayer roadsideLayer;
+LuckyBagManager luckyBagManager;
+int nextOtherAnimationIndex = 0;
+boolean qiyangTriggered = false;
+boolean backgroundFrozen = false;  // 起扬到 qiyang_64 时置 true，所有背景速度归 0
+int currentBeatIndex = 0;         // 当前拍号，供灯笼/柱子/鞭炮按 beat 间隔生成
 
 // ==================== 跳跃高度计算 ====================
 float getJumpHeight(float progress) {
@@ -69,37 +85,48 @@ void setup() {
     jumpFrames[i] = loadImage(folderName + jumpPrefix + nf(i, 2) + ".png");
   }
 
+  qiyangFrames = new PImage[qiyangTotalFrames];
+  for (int i = 0; i < qiyangTotalFrames; i++) {
+    qiyangFrames[i] = loadImage(folderName + qiyangPrefix + nf(i, 2) + ".png");
+  }
+
   backgroundImage = loadImage(BACKGROUND_PATH);
 
   cloudLayer = new CloudLayer();
   mountainLayer = new MountainLayer();
   denglongManager = new DenglongManager();
+  pillarManager = new PillarManager();
+  firecrackerManager = new FirecrackerManager();
   stoneManager = new StoneManager();
   moneyEffect = new MoneyEffect();
   groundManager = new GroundManager();
   roadsideLayer = new RoadsideLayer();
+  loadBlessingsTimeline();
+  initBlessingFont();
+  luckyBagManager = new LuckyBagManager();
 
   song = new SoundFile(this, musicFile);
-  song.loop();
+  song.play();  // 不循环，音乐播完就结束
 
   // 初始化音乐时钟与场景系统
   musicClock = new MusicClock(song, bpm);
   mainScene = new Scene();
   beatDispatcher = new BeatDispatcher();
 
-  // 小马控制器（基于音乐时间驱动的跑/跳 FSM）
-  pony = new PonyController(runFrames, jumpFrames, bpm, beatsPerRunCycle, beatsForRemainingJump);
+  // 小马控制器（基于音乐时间驱动的跑/跳/起扬 FSM）
+  pony = new PonyController(runFrames, jumpFrames, qiyangFrames, bpm, beatsPerRunCycle, beatsForRemainingJump, beatsForQiyang, qiyangStartFrame, qiyangEndFrame, qiyangLoopStartFrame, qiyangLoopFPS);
 
-  // 图层顺序（从远到近）：云 → 山 → 地面 → 路边近景 → 灯笼 → 小马 → 石头 → 金币特效
-  // 石头在最上层，遮蔽小马跑步的阴影
-  mainScene.add(new CloudLayerObject(cloudLayer));          // 最远：云
-  mainScene.add(new MountainLayerObject(mountainLayer));    // 中景：山
-  mainScene.add(new GroundManagerObject(groundManager));    // 近景：地面
-  mainScene.add(new RoadsideLayerObject(roadsideLayer));    // 路边近景（花盆/草丛/树木 预留）
-  mainScene.add(new DenglongManagerObject(denglongManager));// 装饰：灯笼
-  mainScene.add(pony);                                      // 主角小马
-  mainScene.add(new StoneManagerObject(stoneManager));      // 最前：石头（遮蔽小马阴影）
-  mainScene.add(new MoneyEffectObject(moneyEffect));        // 前景：金币红包特效
+  // 图层顺序（从远到近）：云 → 山 → 地面 → 路边近景 → 灯笼 → 柱子 → 鞭炮 → 小马 → 石头 → 金币特效
+  mainScene.add(new CloudLayerObject(cloudLayer));
+  mainScene.add(new MountainLayerObject(mountainLayer));
+  mainScene.add(new GroundManagerObject(groundManager));
+  mainScene.add(new RoadsideLayerObject(roadsideLayer));
+  mainScene.add(new DenglongManagerObject(denglongManager));
+  mainScene.add(new PillarManagerObject(pillarManager));
+  mainScene.add(new FirecrackerManagerObject(firecrackerManager));
+  mainScene.add(pony);
+  mainScene.add(new StoneManagerObject(stoneManager));
+  mainScene.add(new MoneyEffectObject(moneyEffect));
 
   // 注册需要响应整拍事件的对象
   beatDispatcher.addListener(pony);
@@ -130,7 +157,7 @@ void draw() {
   if (animTime < 0) animTime = 0;
 
   if (!isPaused) {
-    // 在每一帧推进前，先分发节拍事件
+    if (musicClock != null) currentBeatIndex = musicClock.beatIndex;
     if (beatDispatcher != null && musicClock != null) {
       beatDispatcher.update(musicClock);
     }
@@ -142,11 +169,48 @@ void draw() {
       mainScene.updateAll(dt, musicTime, beat);
     }
 
+    // 起扬到 qiyang_64 时冻结所有背景（速度归 0，到终点）
+    if (pony != null && pony.getStateLabel().equals("QIYANG") && pony.getCurrentFrameIndex() >= 64) {
+      backgroundFrozen = true;
+    }
+
     // 石头自动跳跃：改为通知 PonyController，由其决定是否真正起跳
     if (stoneManager.checkAutoJump(PONY_X) && pony != null) {
       pony.requestJump();
       println("[AUTO] Stone trigger jump at " + nf(animTime, 0, 2) + "s");
     }
+
+    float musicTime = (musicClock != null) ? musicClock.musicTime : animTime;
+    float ponyHeadX = PONY_X;
+    float ponyHeadY = PONY_Y - getJumpHeight(pony != null ? pony.getCurrentProgress() : 0);
+    boolean ponyIsJumping = (pony != null && pony.getStateLabel().equals("JUMP"));
+    if (luckyBagManager != null) {
+      luckyBagManager.update(dt, musicTime, ponyHeadX, ponyHeadY, ponyIsJumping);
+    }
+
+    for (Stone s : stoneManager.getStones()) {
+      if (!s.isCleared() && s.getRightEdge() < PONY_X - 80 && pony != null && pony.getStateLabel().equals("RUN")) {
+        s.setCleared();
+        spawnBouncyWord(getStonePhrase(s.getTextIndex()), PONY_X, PONY_Y - 120, null);
+      }
+    }
+
+    JSONArray otherArr = getTimelineOtherAnimations();
+    while (nextOtherAnimationIndex < otherArr.size()) {
+      JSONObject ev = otherArr.getJSONObject(nextOtherAnimationIndex);
+      if (musicTime < ev.getFloat("time")) break;
+      String type = ev.getString("type");
+      spawnBouncyWord(getBlessingPhrase(type), PONY_X, PONY_Y - 120, loadBlessingAsset(type));
+      nextOtherAnimationIndex++;
+    }
+
+    if (!qiyangTriggered && musicTime >= getTimelineQiyangTime() && pony != null) {
+      pony.requestQiyang();
+      qiyangTriggered = true;
+      println("[Timeline] Qiyang requested at " + nf(musicTime, 0, 2) + "s");
+    }
+
+    updateBouncyWord(dt);
   }
 
   drawBackground();
@@ -165,7 +229,9 @@ void draw() {
     moneyEffect.display();
   }
 
-  // 小马与金币特效已经挂在 Scene 中，这里只负责调试 UI
+  if (luckyBagManager != null) luckyBagManager.display();
+  drawBouncyWord();
+
   int frameIdx = pony != null ? pony.getCurrentFrameIndex() : 0;
   float prog = pony != null ? pony.getCurrentProgress() : 0;
   drawDebugUI(frameIdx, prog);
@@ -273,6 +339,7 @@ void drawDebugUI(int frameIdx, float prog) {
   text("按 P 暂停", 10, y += dy);
   text("按 空格 手动跳跃", 10, y += dy);
   text("按 S 切换自动跳跃", 10, y += dy);
+  text("按 Q 触发起扬（测试）", 10, y += dy);
   text("点击小马触发特效", 10, y += dy);
   text("暂停时按 ←/→ 逐帧", 10, y += dy);
 }
@@ -280,6 +347,12 @@ void drawDebugUI(int frameIdx, float prog) {
 void keyPressed() {
   if (key == ' ') {
     if (pony != null) pony.requestJump();
+  }
+  if (key == 'q' || key == 'Q') {
+    if (pony != null) {
+      pony.requestQiyang();
+      println("[测试] 按 Q 触发起扬");
+    }
   }
   if (key == 't' || key == 'T') {
     if (pony != null) pony.toggleTestMode();

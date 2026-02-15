@@ -9,8 +9,8 @@ void setup() {
     // 2. 输出配置
   String outputFolder = "C:/Users/Admin/Documents/Processing/project/project-pony/output"; // 输出文件夹
   
-  String inputFilename = "C:/Users/Admin/Documents/Processing/project/project-pony/data//flyingV1.png"; 
-  String outputPrefix = "/fly/fly_"; // 输出前缀
+  String inputFilename = "C:/Users/Admin/Documents/Processing/project/project-pony/data//qiyang.png"; 
+  String outputPrefix = "/qiyang/qiyang_"; // 输出前缀
   //String inputFilename = "C:/Users/Admin/Documents/Processing/project/project-pony/data//runing-v3-middle（512 x 342）.png"; 
   //String outputPrefix = "/run-v3/run-v3_"; // 输出前缀
   
@@ -24,9 +24,9 @@ void setup() {
   //String outputPrefix = "/jump-v4/jump-v4_"; // 输出前缀
   
   // 3. 布局参数
-  int cols = 13;         // 列数
-  int rows = 12;         // 行数
-  int totalFrames = 156; // 总帧数
+  int cols = 4;         // 列数
+  int rows = 41;         // 行数
+  int totalFrames = 164; // 总帧数
   // 4. 【新增】边缘裁剪参数
   // 设置为 10.0 代表：总共切掉 10% 的大小（上下各切 5%，左右各切 5%）
   // 设置为 0.0 代表不裁剪

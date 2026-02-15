@@ -133,15 +133,43 @@ class DenglongManagerObject extends SceneObject {
   }
 
   void update(float dt, float musicTime, float beat) {
-    if (manager != null) {
-      manager.update(dt);
-    }
+    if (manager != null) manager.update(dt);
   }
 
   void draw() {
-    if (manager != null) {
-      manager.display();
-    }
+    if (manager != null) manager.display();
+  }
+}
+
+class PillarManagerObject extends SceneObject {
+  PillarManager manager;
+
+  PillarManagerObject(PillarManager manager) {
+    this.manager = manager;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (manager != null) manager.update(dt);
+  }
+
+  void draw() {
+    if (manager != null) manager.display();
+  }
+}
+
+class FirecrackerManagerObject extends SceneObject {
+  FirecrackerManager manager;
+
+  FirecrackerManagerObject(FirecrackerManager manager) {
+    this.manager = manager;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (manager != null) manager.update(dt);
+  }
+
+  void draw() {
+    if (manager != null) manager.display();
   }
 }
 

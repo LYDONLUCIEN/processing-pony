@@ -28,8 +28,8 @@ class GroundManager {
     }
 
     groundY  = GROUND_Y;
-    heightPx = GROUND_PARALLELOGRAM_HEIGHT;
-    widthPx  = groundImg.width;
+    heightPx = GROUND_PARALLELOGRAM_HEIGHT * GROUND_DISPLAY_SCALE;
+    widthPx  = groundImg.width * GROUND_DISPLAY_SCALE;
     speed    = GROUND_SPEED;
 
     // 与旧版一致：优先用像素值，否则用角度 slantPx = heightPx * tan(GROUND_TILT_DEG)
@@ -66,6 +66,7 @@ class GroundManager {
 
   void update(float dt) {
     if (groundImg == null) return;
+    if (backgroundFrozen) return;
 
     block1.update(dt);
     block2.update(dt);

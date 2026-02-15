@@ -7,16 +7,20 @@ class Stone {
   float scale;
   float speed;
   int typeIndex;
+  int textIndex;
   boolean triggeredJump = false;
+  boolean cleared = false;
 
-  Stone(PImage img, float x, float y, float scale, float speed, int typeIndex) {
+  Stone(PImage img, float x, float y, float scale, float speed, int typeIndex, int textIndex) {
     this.img = img;
     this.x = x;
     this.y = y;
     this.scale = scale;
     this.speed = speed;
     this.typeIndex = typeIndex;
+    this.textIndex = textIndex;
     this.triggeredJump = false;
+    this.cleared = false;
   }
 
   void update(float dt) {
@@ -54,6 +58,10 @@ class Stone {
     }
     return false;
   }
+
+  boolean isCleared() { return cleared; }
+  void setCleared() { cleared = true; }
+  int getTextIndex() { return textIndex; }
 }
 
 class StoneManager {
@@ -62,6 +70,7 @@ class StoneManager {
   float spawnTimer = 0;
   float nextSpawnInterval = STONE_SPAWN_INTERVAL;
   boolean autoJumpEnabled = true;
+  int nextStoneTextIndex = 0;
 
   StoneManager() {
     stones = new ArrayList<Stone>();
@@ -85,13 +94,15 @@ class StoneManager {
 
   void spawnStone() {
     int imgIndex = (int)random(stoneImages.length);
+    int textIdx = nextStoneTextIndex % 3;
+    nextStoneTextIndex++;
     PImage img = stoneImages[imgIndex];
     float x = 800 + img.width * STONE_SCALE / 2;
     float y = STONE_BASE_Y;
     float scale = STONE_SCALE;
     float speed = STONE_SPEED;
 
-    stones.add(new Stone(img, x, y, scale, speed, imgIndex));
+    stones.add(new Stone(img, x, y, scale, speed, imgIndex, textIdx));
   }
 
   boolean checkAutoJump(float ponyX) {
@@ -106,6 +117,7 @@ class StoneManager {
   }
 
   void update(float dt) {
+    if (backgroundFrozen) return;
     spawnTimer += dt;
 
     if (spawnTimer >= nextSpawnInterval) {

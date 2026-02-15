@@ -14,7 +14,7 @@ String jumpPrefix = "/jump-mid-v4/jump-mid-v4_";
 int jumpTotalFrames = 23;       
 float beatsForRemainingJump = 3.0;
 
-float bpm = 125.0;              
+float bpm = 129.0;              
 
 // --- 变量 ---
 PImage[] runFrames;

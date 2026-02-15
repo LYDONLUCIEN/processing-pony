@@ -46,8 +46,7 @@ class Denglong {
 class DenglongManager {
   ArrayList<Denglong> denglongs;
   PImage[] denglongImages;
-  float spawnTimer = 0;
-  float nextSpawnInterval = DENGLONG_SPAWN_INTERVAL;
+  int lastSpawnBeat = -9999;  // 上次生成时的 beat，按 beat 间隔生成
 
   DenglongManager() {
     denglongs = new ArrayList<Denglong>();
@@ -81,12 +80,11 @@ class DenglongManager {
   }
 
   void update(float dt) {
-    spawnTimer += dt;
+    if (backgroundFrozen) return;
 
-    if (spawnTimer >= nextSpawnInterval) {
+    if (currentBeatIndex - lastSpawnBeat >= DENGLONG_SPAWN_INTERVAL_BEATS) {
       spawnDenglong();
-      spawnTimer = 0;
-      nextSpawnInterval = DENGLONG_SPAWN_INTERVAL * random(0.8, 1.2);
+      lastSpawnBeat = currentBeatIndex;
     }
 
     for (int i = denglongs.size() - 1; i >= 0; i--) {

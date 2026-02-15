@@ -39,6 +39,7 @@ class MountainLayer {
   }
 
   void update(float dt) {
+    if (backgroundFrozen) return;
     if (mountainImg != null) {
       block1.update(dt);
       block2.update(dt);

@@ -1,51 +1,76 @@
 // ==================== 小马控制器 ====================
-// 负责跑步 / 跳跃状态机，以及与时间线 / 输入的对接
+// 负责跑步 / 跳跃 / 起扬状态机，以及与时间线 / 输入的对接
 
 class PonyController extends SceneObject implements BeatListener {
   // 帧序列
   PImage[] runFrames;
   PImage[] jumpFrames;
+  PImage[] qiyangFrames;
 
   int runTotalFrames;
   int jumpTotalFrames;
+  int qiyangTotalFrames;
 
   // 节奏相关
   float bpm;
   float beatsPerRunCycle;
   float beatsForRemainingJump;
+  float beatsForQiyang;
 
-  // 状态：0 = RUN, 1 = JUMP
+  int qiyangStartFrame;
+  int qiyangEndFrame;
+  int qiyangLoopStartFrame;  // 第一遍播完后，从该帧开始循环（如 72 = qiyang_72.png）
+  float qiyangLoopFPS;       // 循环段播放帧率
+
+  // 状态：0 = RUN, 1 = JUMP, 2 = QIYANG
   int state = 0;
   boolean jumpRequested = false;
+  boolean qiyangRequested = false;
   int lastRunIndex = -1;
+  boolean qiyangInLoop = false;   // 起扬第一遍播完后，进入 72～结尾 循环
+  float qiyangLoopPhaseStartTime = 0;
 
-  // 当前显示帧与调试值
   PImage currentDisplayFrame = null;
   int currentFrameIndex = 0;
   float currentProgress = 0;
   float runCycleOffset = 0;
   float jumpStartTime = 0;
+  float qiyangStartTime = 0;
 
   // 测试模式时间轴（使用秒为单位的时间戳）
   boolean testMode = true;
   float[] jumpTimeline = { 2.0, 4.5, 7.0, 9.5, 12.0 };
   int nextTestIndex = 0;
 
-  PonyController(PImage[] runFrames, PImage[] jumpFrames,
-                 float bpm, float beatsPerRunCycle, float beatsForRemainingJump) {
+  PonyController(PImage[] runFrames, PImage[] jumpFrames, PImage[] qiyangFrames,
+                 float bpm, float beatsPerRunCycle, float beatsForRemainingJump, float beatsForQiyang,
+                 int qiyangStartFrame, int qiyangEndFrame, int qiyangLoopStartFrame, float qiyangLoopFPS) {
     this.runFrames = runFrames;
     this.jumpFrames = jumpFrames;
+    this.qiyangFrames = qiyangFrames;
     this.runTotalFrames = runFrames != null ? runFrames.length : 0;
     this.jumpTotalFrames = jumpFrames != null ? jumpFrames.length : 0;
+    this.qiyangTotalFrames = qiyangFrames != null ? qiyangFrames.length : 0;
     this.bpm = bpm;
     this.beatsPerRunCycle = beatsPerRunCycle;
     this.beatsForRemainingJump = beatsForRemainingJump;
+    this.beatsForQiyang = beatsForQiyang;
+    this.qiyangStartFrame = qiyangStartFrame;
+    this.qiyangEndFrame = qiyangEndFrame;
+    this.qiyangLoopStartFrame = qiyangLoopStartFrame;
+    this.qiyangLoopFPS = qiyangLoopFPS;
   }
 
-  // 对外接口：请求一次跳跃（来源可以是 "manual" / "stone" / "timeline" 等）
   void requestJump() {
     if (state == 0) {
       jumpRequested = true;
+    }
+  }
+
+  // 起扬：在时间轴到达 qiyangTime 时调用，下次 run 过渡帧切到起扬动作
+  void requestQiyang() {
+    if (state == 0) {
+      qiyangRequested = true;
     }
   }
 
@@ -54,6 +79,7 @@ class PonyController extends SceneObject implements BeatListener {
     nextTestIndex = 0;
     if (!testMode) {
       jumpRequested = false;
+      qiyangRequested = false;
     }
   }
 
@@ -65,8 +91,8 @@ class PonyController extends SceneObject implements BeatListener {
   void update(float dt, float musicTime, float beat) {
     float animTime = musicTime;  // 对于小马而言，直接使用音乐时间作为主时间轴
 
-    // 自动测试时间线：基于绝对时间戳的事件
-    if (testMode && nextTestIndex < jumpTimeline.length) {
+    // 自动测试时间线：基于绝对时间戳的事件（起扬未请求时才自动跳）
+    if (testMode && !qiyangRequested && nextTestIndex < jumpTimeline.length) {
       if (animTime >= jumpTimeline[nextTestIndex]) {
         requestJump();
         println("[AUTO] Timeline jump at " + nf(animTime, 0, 2) + "s");
@@ -91,14 +117,22 @@ class PonyController extends SceneObject implements BeatListener {
 
       currentProgress = currentCycleProgress;
 
-      // 在特定帧检查是否需要切到跳跃
       boolean transitionPoint = (index == 4);
 
-      if (transitionPoint && lastRunIndex != 4 && jumpRequested) {
+      // 优先起扬，再跳跃
+      if (transitionPoint && lastRunIndex != 4 && qiyangRequested && qiyangTotalFrames > 0) {
         currentDisplayFrame = runFrames[index];
         lastRunIndex = index;
         currentFrameIndex = index;
+        state = 2;
+        qiyangStartTime = animTime;
+        qiyangRequested = false;
+        println(">>> 起扬: RUN[4] -> QIYANG at " + nf(animTime, 0, 2));
 
+      } else if (transitionPoint && lastRunIndex != 4 && jumpRequested) {
+        currentDisplayFrame = runFrames[index];
+        lastRunIndex = index;
+        currentFrameIndex = index;
         state = 1;
         jumpStartTime = animTime;
         jumpRequested = false;
@@ -108,6 +142,39 @@ class PonyController extends SceneObject implements BeatListener {
         lastRunIndex = index;
         currentFrameIndex = index;
         currentDisplayFrame = runFrames[index];
+      }
+
+    } else if (state == 2) {
+      // ================= QIYANG：第一遍 14～结尾，播完后从 qiyangLoopStartFrame(72)～结尾 循环；到 qiyangEndFrame 时主流程冻结背景 =================
+      int lastFrame = max(qiyangStartFrame, qiyangTotalFrames - 1);
+      int playFrames = max(1, lastFrame - qiyangStartFrame + 1);
+      float timeSinceQiyang = animTime - qiyangStartTime;
+      float totalQiyangSec = (60.0 / bpm) * beatsForQiyang;
+      currentProgress = totalQiyangSec > 0 ? min(1.0f, timeSinceQiyang / totalQiyangSec) : 1.0f;
+
+      if (currentProgress >= 1.0f && !qiyangInLoop) {
+        qiyangInLoop = true;
+        qiyangLoopPhaseStartTime = animTime;
+      }
+
+      if (qiyangInLoop) {
+        int loopStart = min(qiyangLoopStartFrame, qiyangTotalFrames - 1);
+        int loopLen = max(1, qiyangTotalFrames - loopStart);
+        float t = (animTime - qiyangLoopPhaseStartTime) * qiyangLoopFPS;
+        int frameInLoop = (int)(t % loopLen);
+        int idx = loopStart + frameInLoop;
+        if (idx >= qiyangTotalFrames) idx = qiyangTotalFrames - 1;
+        currentFrameIndex = idx;
+        currentDisplayFrame = qiyangFrames != null && idx < qiyangTotalFrames ? qiyangFrames[idx] : runFrames[0];
+      } else if (currentProgress >= 1.0f) {
+        currentFrameIndex = lastFrame;
+        currentDisplayFrame = qiyangFrames != null && lastFrame < qiyangTotalFrames ? qiyangFrames[lastFrame] : runFrames[0];
+      } else {
+        int idx = qiyangStartFrame + (int)(currentProgress * playFrames);
+        if (idx > lastFrame) idx = lastFrame;
+        if (idx < qiyangStartFrame) idx = qiyangStartFrame;
+        currentFrameIndex = idx;
+        currentDisplayFrame = qiyangFrames != null && idx < qiyangTotalFrames ? qiyangFrames[idx] : runFrames[0];
       }
 
     } else if (state == 1) {
@@ -156,10 +223,8 @@ class PonyController extends SceneObject implements BeatListener {
       drawPony(currentDisplayFrame);
     }
 
-    // 在 RUN 状态且有排队跳跃请求时给一个提示
-    if (state == 0 && jumpRequested) {
-      drawWaitingIcon();
-    }
+    if (state == 0 && jumpRequested) drawWaitingIcon();
+    if (state == 0 && qiyangRequested) drawWaitingIcon();
   }
 
   // ========== BeatListener 接口（目前保留为扩展点） ==========
@@ -179,7 +244,10 @@ class PonyController extends SceneObject implements BeatListener {
   }
 
   String getStateLabel() {
-    return (state == 0) ? "RUN" : "JUMP";
+    if (state == 0) return "RUN";
+    if (state == 1) return "JUMP";
+    if (state == 2) return "QIYANG";
+    return "RUN";
   }
 
   float getRunCycleOffset() {

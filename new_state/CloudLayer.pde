@@ -33,7 +33,8 @@ class Cloud {
 
   boolean isOffScreen() {
     if (img == null) return true;
-    return x < -img.width * scale;
+    // 移出左侧 CLOUD_OFFSCREEN_LEFT 才移除，保证运动距离超过约 1300
+    return x < -CLOUD_OFFSCREEN_LEFT;
   }
 }
 
@@ -70,54 +71,42 @@ class CloudLayer {
     }
   }
 
-  // 云所在区域格子：每 CLOUD_REGION_WIDTH×CLOUD_REGION_HEIGHT 为一格
-  int cloudCellX(float x) {
-    return (int) floor(x / CLOUD_REGION_WIDTH);
-  }
-  int cloudCellY(float y) {
-    return (int) floor((y - CLOUD_MIN_Y) / CLOUD_REGION_HEIGHT);
-  }
-
-  // 指定格子内现有云数量
-  int countCloudsInCell(int cx, int cy) {
-    int n = 0;
+  // 与最近云的水平距离是否 >= CLOUD_MIN_GAP
+  boolean hasMinGapFromOthers(float newX) {
     for (Cloud c : clouds) {
-      if (cloudCellX(c.x) == cx && cloudCellY(c.y) == cy) n++;
+      if (abs(c.x - newX) < CLOUD_MIN_GAP) return false;
     }
-    return n;
+    return true;
   }
 
   void spawnInitialClouds() {
-    // 在画面内均匀放几朵，且每 800×200 区域不超过 5 朵
+    // 在 800 宽度内均匀放 2～3 朵，保持 CLOUD_MIN_GAP 间隔
     int count = (int)random(CLOUD_MIN_CLOUDS, CLOUD_MAX_CLOUDS + 1);
+    float span = max(CLOUD_MIN_GAP, (width - CLOUD_MIN_GAP) / max(1, count - 1));
     for (int i = 0; i < count; i++) {
-      trySpawnCloudInRange(0, width);
+      float x = CLOUD_MIN_GAP * 0.5f + i * span + random(-span * 0.2f, span * 0.2f);
+      if (x > width - CLOUD_MIN_GAP * 0.5f) x = width - CLOUD_MIN_GAP * 0.5f;
+      if (x < CLOUD_MIN_GAP * 0.5f) x = CLOUD_MIN_GAP * 0.5f;
+      if (hasMinGapFromOthers(x)) {
+        int imgIndex = (int)random(cloudImages.length);
+        PImage img = cloudImages[imgIndex];
+        float scale = random(CLOUD_MIN_SCALE, CLOUD_MAX_SCALE);
+        float y = random(CLOUD_MIN_Y, CLOUD_MAX_Y);
+        float speed = CLOUD_SPEED * random(0.95f, 1.05f);
+        clouds.add(new Cloud(img, x, y, scale, speed));
+      }
     }
     scheduleNextSpawn();
   }
 
   void spawnCloud(float startX) {
+    if (!hasMinGapFromOthers(startX)) return;
     int imgIndex = (int)random(cloudImages.length);
     PImage img = cloudImages[imgIndex];
     float scale = random(CLOUD_MIN_SCALE, CLOUD_MAX_SCALE);
     float y = random(CLOUD_MIN_Y, CLOUD_MAX_Y);
-    float speed = CLOUD_SPEED * random(0.95, 1.05);
+    float speed = CLOUD_SPEED * random(0.95f, 1.05f);
     clouds.add(new Cloud(img, startX, y, scale, speed));
-  }
-
-  // 在 x 范围内尝试生成一朵云，仅当该格未满（每区最多 5 朵）时才生成
-  boolean trySpawnCloudInRange(float xMin, float xMax) {
-    float x = random(xMin, xMax);
-    float y = random(CLOUD_MIN_Y, CLOUD_MAX_Y);
-    int cx = cloudCellX(x);
-    int cy = cloudCellY(y);
-    if (countCloudsInCell(cx, cy) >= CLOUD_MAX_PER_REGION) return false;
-    int imgIndex = (int)random(cloudImages.length);
-    PImage img = cloudImages[imgIndex];
-    float scale = random(CLOUD_MIN_SCALE, CLOUD_MAX_SCALE);
-    float speed = CLOUD_SPEED * random(0.95, 1.05);
-    clouds.add(new Cloud(img, x, y, scale, speed));
-    return true;
   }
 
   void scheduleNextSpawn() {
@@ -125,6 +114,7 @@ class CloudLayer {
   }
 
   void update(float dt) {
+    if (backgroundFrozen) return;
     for (int i = clouds.size() - 1; i >= 0; i--) {
       Cloud cloud = clouds.get(i);
       cloud.update(dt);
@@ -137,12 +127,7 @@ class CloudLayer {
     spawnTimer += dt;
     if (spawnTimer >= nextSpawnTime) {
       float spawnX = width + 80;
-      float spawnY = random(CLOUD_MIN_Y, CLOUD_MAX_Y);
-      int cx = cloudCellX(spawnX);
-      int cy = cloudCellY(spawnY);
-      if (countCloudsInCell(cx, cy) < CLOUD_MAX_PER_REGION) {
-        spawnCloud(spawnX);
-      }
+      spawnCloud(spawnX);
       spawnTimer = 0;
       scheduleNextSpawn();
     }

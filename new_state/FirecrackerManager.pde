@@ -25,12 +25,21 @@ class Firecracker {
     translate(x, y);
     scale(scale);
     imageMode(CENTER);
-    image(img, 0, 0);
+    if (img != null && img.width > 1) {
+      image(img, 0, 0);
+    } else {
+      noStroke();
+      fill(255, 180, 50);
+      ellipse(0, 0, 24, 60);
+      fill(255, 220, 100);
+      ellipse(0, -18, 14, 20);
+    }
     popMatrix();
   }
 
   boolean isOffScreen() {
-    return x < -img.width * scale;
+    float w = (img != null && img.width > 1) ? img.width * scale : 40;
+    return x < -w;
   }
 }
 

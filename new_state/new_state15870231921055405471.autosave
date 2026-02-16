@@ -5,13 +5,7 @@ import java.util.ArrayList;
 // 设为 true 时运行测试草图（按键 1-0 触发效果），不加载音乐与场景
 boolean TEST_MODE = false;
 // 设为 true 时运行柱子与栏杆对齐调试（test_zhuzi），不加载音乐与场景
-boolean TEST_ZHUZI = false;
-// 设为 true 时运行烟花测试（test_firework），调试爆炸音效与粒子动画
-boolean TEST_FIREWORK = false;
-// 设为 false 时隐藏左侧调试文字与底部自动跳跃时间条；需要调试时改回 true
-boolean SHOW_DEBUG_UI = false;
-// 调试：从歌曲最后 N 秒开始播放（仅测试结尾段时用）；0 = 从头播放。例如设为 15 则直接播最后 15 秒（绶带/烟花/马到成功/起扬）
-float DEBUG_JUMP_TO_LAST_SEC = 0;
+boolean TEST_ZHUZI = true;
 
 String folderName = "C:/Users/Admin/Documents/Processing/project/project-pony/output";
 String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/assets/song/马年大吉.wav";
@@ -26,7 +20,11 @@ int jumpTotalFrames = 23;
 float beatsForRemainingJump = 3.0;
 
 String qiyangPrefix = "/qiyang/qiyang_";
-// 起扬参数统一在 AnimationConfig.pde：QIYANG_TOTAL_FRAMES / START / END / LOOP_START / FPS / LOOP_FPS
+int qiyangTotalFrames = 169;
+int qiyangStartFrame = 14;   // 从第15张 qiyang_14.png 开始播
+int qiyangEndFrame = 64;     // 到达此帧时背景全部停
+int qiyangLoopStartFrame = 72;  // 第一遍播完后，从第73张 qiyang_72.png 开始循环播到结尾
+float qiyangLoopFPS = 12;       // 循环段播放帧率
 float beatsForQiyang = 20;
 
 float bpm = 129.0;
@@ -54,8 +52,7 @@ int prevMillis = 0;
 // ==================== 动画层系统 ====================
 PImage backgroundImage;
 CloudLayer cloudLayer;
-  MountainLayer mountainLayer;
-  ZhuziLayer zhuziLayer;
+MountainLayer mountainLayer;
 DenglongManager denglongManager;
 PillarManager pillarManager;
 FirecrackerManager firecrackerManager;
@@ -69,13 +66,8 @@ BlessingSpriteManager blessingSpriteManager;
 int nextOtherAnimationIndex = 0;
 int nextJumpTriggerIndex = 0;
 boolean qiyangTriggered = false;
-float successTriggeredTime = -1;  // 马到成功触发时刻（仅记录）；起扬由 qiyangTime 时间点触发
 boolean backgroundFrozen = false;  // 起扬到 qiyang_64 时置 true，所有背景速度归 0
 int currentBeatIndex = 0;         // 当前拍号，供灯笼/柱子/鞭炮按 beat 间隔生成
-boolean fireworkActive = false;   // 马到成功前 N 秒起持续放烟花
-float fireworkSpawnAccum = 0;     // 连续烟花间隔计时
-ShoudaiRibbon shoudaiRibbon;      // 绶带：从右向左 FORGE_SPEED 运动，碰胸口触发马到成功
-boolean shoudaiRibbonSpawned = false;
 
 // 娱乐模式：开口福袋光标，按住/划动爆金币
 boolean entertainmentMode = false;
@@ -92,20 +84,6 @@ float getJumpHeight(float progress) {
   return sin(jumpProgress * PI) * PONY_JUMP_HEIGHT;
 }
 
-// 小马头顶在跳跃最高点时的 Y（用于礼盒垂直对齐）；与 getJumpHeight(JUMP_APEX_FRACTION) + PONY_HEAD_OFFSET_Y 一致
-float getPonyHeadApexY() {
-  float apexHeight = sin(JUMP_APEX_FRACTION * PI) * PONY_JUMP_HEIGHT;
-  return PONY_Y - apexHeight + PONY_HEAD_OFFSET_Y;
-}
-
-// 起跳请求提前量（秒）：JSON 里读到 T 后，要在 T - 此值 时 requestJump。
-// = 最长等待 run 到过渡帧（1 beat）+ 起跳到最高点时间（JUMP_APEX_FRACTION * 跳跃总时长）
-float getJumpRequestLeadTimeSec() {
-  float runCycleSec = (60.0f / bpm) * beatsPerRunCycle;
-  float jumpApexSec = (60.0f / bpm) * beatsForRemainingJump * JUMP_APEX_FRACTION;
-  return runCycleSec + jumpApexSec;
-}
-
 // 福袋顶到后触发的精灵动画（小象/金钱/福等），由 LuckyBagManager 调用
 void spawnBlessingSprite(String type, float x, float y) {
   if (blessingSpriteManager != null) blessingSpriteManager.spawn(type, x, y);
@@ -114,14 +92,7 @@ void spawnBlessingSprite(String type, float x, float y) {
 // 礼盒击中：从礼盒位置由小放大飞到小马背上（目标位置由 BlessingConfig 偏移决定）
 void spawnBlessingSpriteFromBox(String type, float boxX, float boxY) {
   // 马背上精灵落点按 BlessingConfig：相对 (PONY_X, PONY_Y)，用 PONY_X/PONY_Y 计算
-  if (blessingSpriteManager != null) blessingSpriteManager.spawnFromBox(type, boxX, boxY, PONY_X, PONY_Y);
-}
-
-// 马上起飞：在马背两侧生成双火箭（由 LuckyBagManager 碰撞 fly 礼盒时调用）
-void spawnFlyRocketsAtPony() {
-  if (blessingSpriteManager == null) return;
-  blessingSpriteManager.spawn("fly_back", PONY_X + ROCKET_OFFSET_BEHIND_X, PONY_Y + ROCKET_BEHIND_Y, BLESSING_SPRITE_DURATION);
-  blessingSpriteManager.spawn("fly_front", PONY_X + ROCKET_OFFSET_FRONT_X, PONY_Y + ROCKET_FRONT_Y, BLESSING_SPRITE_DURATION);
+if (blessingSpriteManager != null) blessingSpriteManager.spawnFromBox(type, boxX, boxY, PONY_X, PONY_Y);
 }
 
 void setup() {
@@ -129,11 +100,6 @@ void setup() {
   frameRate(60);
   if (TEST_ZHUZI) {
     testZhuziSetup();
-    prevMillis = millis();
-    return;
-  }
-  if (TEST_FIREWORK) {
-    testFireworkSetup();
     prevMillis = millis();
     return;
   }
@@ -155,8 +121,8 @@ void setup() {
     jumpFrames[i] = loadImage(folderName + jumpPrefix + nf(i, 2) + ".png");
   }
 
-  qiyangFrames = new PImage[QIYANG_TOTAL_FRAMES];
-  for (int i = 0; i < QIYANG_TOTAL_FRAMES; i++) {
+  qiyangFrames = new PImage[qiyangTotalFrames];
+  for (int i = 0; i < qiyangTotalFrames; i++) {
     qiyangFrames[i] = loadImage(folderName + qiyangPrefix + nf(i, 2) + ".png");
   }
 
@@ -164,7 +130,6 @@ void setup() {
 
   cloudLayer = new CloudLayer();
   mountainLayer = new MountainLayer();
-  zhuziLayer = new ZhuziLayer();
   denglongManager = new DenglongManager();
   pillarManager = new PillarManager();
   firecrackerManager = new FirecrackerManager();
@@ -177,11 +142,6 @@ void setup() {
   initBlessingFont();
   luckyBagManager = new LuckyBagManager();
   blessingSpriteManager = new BlessingSpriteManager();
-  PImage[] shoudaiFrames = new PImage[OUTPUT_SHOUDAI_COUNT];
-  for (int i = 0; i < OUTPUT_SHOUDAI_COUNT; i++) {
-    shoudaiFrames[i] = loadImage(folderName + "/" + OUTPUT_SHOUDAI_PREFIX + nf(i, 2) + OUTPUT_FRAME_SUFFIX);
-  }
-  shoudaiRibbon = new ShoudaiRibbon(shoudaiFrames, SHOUDAI_RIBBON_FPS, FORGE_SPEED, SHOUDAI_RIBBON_SCALE);
 
   // 娱乐模式光标图（开口福袋），优先用专用图，否则用福袋图
   entertainmentCursorImg = loadImage(ENTERTAINMENT_CURSOR_PATH);
@@ -198,43 +158,23 @@ void setup() {
   song = new SoundFile(this, musicFile);
   song.play();  // 不循环，音乐播完就结束
 
-  // 调试：从最后 N 秒开始，便于只测结尾（绶带/烟花/马到成功/起扬）
-  if (DEBUG_JUMP_TO_LAST_SEC > 0 && song.duration() > 0) {
-    float startTime = max(0, song.duration() - DEBUG_JUMP_TO_LAST_SEC);
-    song.jump(startTime);
-    // 时间轴索引对齐到 startTime，避免一帧内触发前面所有事件
-    float jumpLead = getJumpRequestLeadTimeSec();
-    while (nextJumpTriggerIndex < getTimelineHitTimeCount() && getTimelineHitTime(nextJumpTriggerIndex) - jumpLead <= startTime) {
-      nextJumpTriggerIndex++;
-    }
-    JSONArray otherArr = getTimelineOtherAnimations();
-    while (nextOtherAnimationIndex < otherArr.size() && otherArr.getJSONObject(nextOtherAnimationIndex).getFloat("time") <= startTime) {
-      nextOtherAnimationIndex++;
-    }
-    println("[DEBUG] Jumped to last " + DEBUG_JUMP_TO_LAST_SEC + "s, startTime=" + nf(startTime, 0, 2) + "s, duration=" + nf(song.duration(), 0, 2) + "s");
-  }
-
   // 初始化音乐时钟与场景系统
   musicClock = new MusicClock(song, bpm);
   mainScene = new Scene();
   beatDispatcher = new BeatDispatcher();
 
   // 小马控制器（基于音乐时间驱动的跑/跳/起扬 FSM）
-  pony = new PonyController(runFrames, jumpFrames, qiyangFrames, bpm, beatsPerRunCycle, beatsForRemainingJump, beatsForQiyang, QIYANG_START_FRAME, QIYANG_END_FRAME, QIYANG_LOOP_START_FRAME, QIYANG_LOOP_FPS);
+  pony = new PonyController(runFrames, jumpFrames, qiyangFrames, bpm, beatsPerRunCycle, beatsForRemainingJump, beatsForQiyang, qiyangStartFrame, qiyangEndFrame, qiyangLoopStartFrame, qiyangLoopFPS);
 
   // 图层顺序（从远到近）：云 → 山 → 地面 → 路边近景 → 灯笼 → 柱子 → 鞭炮 → 小马 → 石头 → 金币特效
   mainScene.add(new CloudLayerObject(cloudLayer));
   mainScene.add(new MountainLayerObject(mountainLayer));
-  mainScene.add(new FireworkManagerObject(fireworkManager));  // 烟花在柱子前，被 zhuzi 遮挡
-  mainScene.add(new ZhuziLayerObject(zhuziLayer));
+  mainScene.add(new FireworkManagerObject(fireworkManager));
   mainScene.add(new GroundManagerObject(groundManager));
-  mainScene.add(new RoadsideBackObject(roadsideLayer));   // 花 + 栏杆（中景）
-  mainScene.add(new ShoudaiRibbonObject(shoudaiRibbon));   // 绶带：在花/栏杆之上，在护栏/草之下
-  mainScene.add(new RoadsideFrontObject(roadsideLayer));  // 护栏 + 草（前景）
+  mainScene.add(new RoadsideLayerObject(roadsideLayer));
   mainScene.add(new DenglongManagerObject(denglongManager));
   mainScene.add(new PillarManagerObject(pillarManager));
   mainScene.add(new FirecrackerManagerObject(firecrackerManager));
-  mainScene.add(new BlessingSpritesBackObject(blessingSpriteManager)); // 火箭 fly_back 等：画在小马后
   mainScene.add(pony);
   mainScene.add(new StoneManagerObject(stoneManager));
   mainScene.add(new MoneyEffectObject(moneyEffect));
@@ -255,10 +195,6 @@ void draw() {
     testZhuziDraw();
     return;
   }
-  if (TEST_FIREWORK) {
-    testFireworkDraw();
-    return;
-  }
   if (TEST_MODE) {
     testDraw();
     return;
@@ -268,7 +204,9 @@ void draw() {
   float dt = (currMillis - prevMillis) / 1000.0;
   prevMillis = currMillis;
 
-  if (musicClock != null) musicClock.update(dt);
+  if (musicClock != null) {
+    musicClock.update();
+  }
 
   // 主时间轴：优先跟随音乐，保证长时间播放也不会音画漂移
   if (!isPaused) {
@@ -294,16 +232,14 @@ void draw() {
       mainScene.updateAll(dt, musicTime, beat);
     }
 
-    // 起扬到 QIYANG_END_FRAME 时冻结所有背景（速度归 0，到终点）
-    if (pony != null && pony.getStateLabel().equals("QIYANG") && pony.getCurrentFrameIndex() >= QIYANG_END_FRAME) {
+    // 起扬到 qiyang_64 时冻结所有背景（速度归 0，到终点）
+    if (pony != null && pony.getStateLabel().equals("QIYANG") && pony.getCurrentFrameIndex() >= 64) {
       backgroundFrozen = true;
     }
 
     float musicTime = (musicClock != null) ? musicClock.musicTime : animTime;
-    // 起跳触发：JSON 的 time = T（小马应在最高点撞到的时刻）。requestJump 后要等 run 到过渡帧才真正起跳，再经 jumpApexTime 到最高点。
-    // 所以提前量 = 最长等待 run 一周期 + 起跳到最高点时间
-    float jumpRequestLeadSec = getJumpRequestLeadTimeSec();
-    while (nextJumpTriggerIndex < getTimelineHitTimeCount() && musicTime >= getTimelineHitTime(nextJumpTriggerIndex) - jumpRequestLeadSec && pony != null) {
+    // 时间轴统一触发起跳：在撞击时刻 T 前 JUMP_APEX_TIME 秒起跳，T 时小马在最高点
+    while (nextJumpTriggerIndex < getTimelineHitTimeCount() && musicTime >= getTimelineHitTime(nextJumpTriggerIndex) - JUMP_APEX_TIME && pony != null) {
       pony.requestJump();
       println("[AUTO] Jump trigger for hit at " + nf(getTimelineHitTime(nextJumpTriggerIndex), 0, 2) + "s (musicTime " + nf(musicTime, 0, 2) + "s)");
       nextJumpTriggerIndex++;
@@ -322,60 +258,24 @@ void draw() {
       }
     }
 
-    // 绶带：blessings_timeline.json 里 success 的 time（如 79.2）表示该时刻绶带中心与 PONY_CHEST 相碰并触发
-    // leadTime = 从画面右侧到胸口所需时间，提前在 successTime - leadTime 开始画并左移，到 79.2 时正好相碰
-    float successTime = getTimelineSuccessTime();
-    float ribbonLeadTime = getShoudaiRibbonLeadTime();
-    if (successTime < 99998 && musicTime >= successTime - ribbonLeadTime && !shoudaiRibbonSpawned && shoudaiRibbon != null) {
-      float spawnX = width + SHOUDAI_RIBBON_SPAWN_MARGIN + SHOUDAI_RIBBON_OFFSET_X;
-      float spawnY = SHOUDAI_RIBBON_BASE_Y + SHOUDAI_RIBBON_OFFSET_Y;
-      shoudaiRibbon.spawn(spawnX, spawnY);
-      shoudaiRibbonSpawned = true;
-    }
-    if (shoudaiRibbon != null && shoudaiRibbon.isActive()) {
-      float hitX = PONY_X + PONY_CHEST_OFFSET_X + SHOUDAI_HIT_OFFSET_X;
-      if (shoudaiRibbon.hitChest(hitX) && !shoudaiRibbon.hasAlreadyTriggeredSuccess()) {
-        shoudaiRibbon.setTriggeredSuccess();
-        spawnBouncyWord(getBlessingPhrase("success"), PONY_X + PONY_CHEST_OFFSET_X, PONY_Y + PONY_CHEST_OFFSET_Y, null);
-        if (firecrackerManager != null) firecrackerManager.spawnBurst(BLESSING_SUCCESS_FIRECRACKER_BURST_COUNT);
-        successTriggeredTime = musicTime;
-        // success 只保留绶带 + 字 + 鞭炮，不再 spawn 任何 shoudai 精灵，避免出现第二次 shoudai
-      }
-      if (shoudaiRibbon.isOffScreenLeft()) {
-        shoudaiRibbon.deactivate();
-      }
-    }
-
     JSONArray otherArr = getTimelineOtherAnimations();
     while (nextOtherAnimationIndex < otherArr.size()) {
       JSONObject ev = otherArr.getJSONObject(nextOtherAnimationIndex);
       if (musicTime < ev.getFloat("time")) break;
       String type = ev.getString("type");
-      if (type.equals("success")) {
-        // 马到成功由绶带碰胸口触发，此处只推进索引
-        nextOtherAnimationIndex++;
-        continue;
-      }
       spawnBouncyWord(getBlessingPhrase(type), PONY_X + PONY_CHEST_OFFSET_X, PONY_Y + PONY_CHEST_OFFSET_Y, loadBlessingAsset(type));
+      if (type.equals("success")) {
+        if (blessingSpriteManager != null) blessingSpriteManager.spawn("shoudai", PONY_X + SHOUDAI_OFFSET_X, PONY_Y + SHOUDAI_OFFSET_Y);
+        if (firecrackerManager != null) firecrackerManager.spawnBurst(BLESSING_SUCCESS_FIRECRACKER_BURST_COUNT);
+      }
       if (type.equals("daji")) {
+        if (blessingSpriteManager != null) blessingSpriteManager.spawn("daji", PONY_X + SHOUDAI_OFFSET_X, PONY_Y + SHOUDAI_OFFSET_Y, BLESSING_DAJI_SHOUDAI_DURATION);
         if (fireworkManager != null) fireworkManager.spawnBurst(BLESSING_DAJI_FIREWORK_COUNT);
       }
       nextOtherAnimationIndex++;
     }
 
-    // 烟花：仅在 success 前 3 秒开始放，之后持续到关闭（successTime 已在上面用过）
-    if (successTime < 99998 && musicTime >= successTime - FIREWORK_SUCCESS_LEAD_SEC) {
-      fireworkActive = true;
-    }
-    if (fireworkActive && fireworkManager != null) {
-      fireworkSpawnAccum += dt;
-      while (fireworkSpawnAccum >= FIREWORK_SUCCESS_SPAWN_INTERVAL) {
-        fireworkSpawnAccum -= FIREWORK_SUCCESS_SPAWN_INTERVAL;
-        fireworkManager.spawnFirework();
-      }
-    }
-
-    // 起扬触发：仅由时间轴 qiyangTime 触发，与 success/daji 无关
+    // 起扬触发：时间轴指定时间 或 音乐结束前 N 秒，取较早者，避免音乐结束后小马卡住
     float qiyangTriggerTime = getTimelineQiyangTime();
     if (song != null && song.duration() > 0 && QIYANG_TRIGGER_SECONDS_BEFORE_END > 0) {
       float triggerByEnd = song.duration() - QIYANG_TRIGGER_SECONDS_BEFORE_END;
@@ -413,10 +313,8 @@ void draw() {
 
   int frameIdx = pony != null ? pony.getCurrentFrameIndex() : 0;
   float prog = pony != null ? pony.getCurrentProgress() : 0;
-  if (SHOW_DEBUG_UI) {
-    drawDebugUI(frameIdx, prog);
-    drawTimeline();
-  }
+  drawDebugUI(frameIdx, prog);
+  drawTimeline();
 
   // 娱乐模式：绘制开口福袋光标并隐藏系统光标
   if (entertainmentMode) {
@@ -553,10 +451,6 @@ void keyPressed() {
     if (key == ' ') spawnZhuziAtNearestRailing();
     return;
   }
-  if (TEST_FIREWORK) {
-    testFireworkKeyPressed();
-    return;
-  }
   if (TEST_MODE) {
     testKeyPressed();
     return;
@@ -600,10 +494,6 @@ void keyPressed() {
 }
 
 void mousePressed() {
-  if (TEST_FIREWORK) {
-    testFireworkMousePressed();
-    return;
-  }
   if (entertainmentMode) {
     moneyEffect.spawn(mouseX, mouseY);
     lastEntertainSpawnX = mouseX;

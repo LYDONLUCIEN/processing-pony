@@ -36,8 +36,8 @@ class GiftBox {
     boxX = startX;
     hangTime = 0;
     boxCenterY = anchorY + stringLen;
-    lidX = boxX;
-    lidY = boxCenterY;
+    lidX = boxX + GIFT_BOX_LID_OFFSET_X;
+    lidY = boxCenterY + GIFT_BOX_LID_Y_OFFSET;
     bodyX = boxX;
     bodyY = boxCenterY;
     lidAngle = bodyAngle = 0;
@@ -61,8 +61,8 @@ class GiftBox {
     float bob = GIFT_BOX_BOB_AMPLITUDE * sin(TWO_PI * GIFT_BOX_BOB_SPEED * hangTime);
     boxCenterY = anchorY + stringLength + bob;
     boxX -= speed * dt;
-    lidX = boxX;
-    lidY = boxCenterY;
+    lidX = boxX + GIFT_BOX_LID_OFFSET_X;
+    lidY = boxCenterY + GIFT_BOX_LID_Y_OFFSET;
     bodyX = boxX;
     bodyY = boxCenterY;
   }
@@ -105,28 +105,37 @@ class GiftBox {
         fill(255, 220, 100, glowAlpha * 0.6f);
         ellipse(hitSpawnX, hitSpawnY, GIFT_BOX_GLOW_RADIUS * 2, GIFT_BOX_GLOW_RADIUS * 2);
       }
-      drawBody(bodyX, bodyY, bodyAngle);
-      drawLid(lidX, lidY, lidAngle);
+      float flyAlpha = 255;
+      if (GIFT_BOX_FADE_DURATION > 0 && hitTime > GIFT_BOX_FLY_DURATION_MAX - GIFT_BOX_FADE_DURATION) {
+        float fadeProgress = (hitTime - (GIFT_BOX_FLY_DURATION_MAX - GIFT_BOX_FADE_DURATION)) / GIFT_BOX_FADE_DURATION;
+        if (fadeProgress > 1) fadeProgress = 1;
+        flyAlpha = 255 * (1 - fadeProgress);
+      }
+      drawBody(bodyX, bodyY, bodyAngle, flyAlpha);
+      drawLid(lidX, lidY, lidAngle, flyAlpha);
       return;
     }
-    drawBody(boxX, boxCenterY, 0);
-    drawLid(boxX, boxCenterY, 0);
+    drawBody(boxX, boxCenterY, 0, 255);
+    drawLid(lidX, lidY, 0, 255);
   }
 
-  void drawBody(float px, float py, float angle) {
+  void drawBody(float px, float py, float angle, float alpha) {
     if (bodyImg != null && bodyImg.width > 0) {
       pushMatrix();
       translate(px, py);
       rotate(angle);
       scale(scale);
       imageMode(CENTER);
+      if (alpha < 255) tint(255, 255, 255, (int)alpha);
       image(bodyImg, 0, 0);
+      if (alpha < 255) noTint();
       popMatrix();
     } else {
       pushMatrix();
       translate(px, py);
       rotate(angle);
-      fill(139, 90, 43);
+      if (alpha < 255) fill(139, 90, 43, (int)alpha);
+      else fill(139, 90, 43);
       noStroke();
       rectMode(CENTER);
       rect(0, 0, 40 * scale, 35 * scale);
@@ -134,20 +143,23 @@ class GiftBox {
     }
   }
 
-  void drawLid(float px, float py, float angle) {
+  void drawLid(float px, float py, float angle, float alpha) {
     if (lidImg != null && lidImg.width > 0) {
       pushMatrix();
       translate(px, py);
       rotate(angle);
       scale(scale);
       imageMode(CENTER);
+      if (alpha < 255) tint(255, 255, 255, (int)alpha);
       image(lidImg, 0, 0);
+      if (alpha < 255) noTint();
       popMatrix();
     } else {
       pushMatrix();
       translate(px, py);
       rotate(angle);
-      fill(160, 82, 45);
+      if (alpha < 255) fill(160, 82, 45, (int)alpha);
+      else fill(160, 82, 45);
       noStroke();
       rectMode(CENTER);
       rect(0, 0, 42 * scale, 15 * scale);

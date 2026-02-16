@@ -175,11 +175,20 @@ class RoadsideLayer {
   }
 
   void display() {
-    // 从远到近：花朵 → 栏杆 → 护栏（最下方）→ 草丛（最前）
+    displayBack();
+    displayFront();
+  }
+
+  /** 中景：花朵 + 栏杆（绶带画在这之后、displayFront 之前） */
+  void displayBack() {
     if (flowerBlock1 != null) flowerBlock1.display();
     if (flowerBlock2 != null) flowerBlock2.display();
     if (railingBlock1 != null) railingBlock1.display();
     if (railingBlock2 != null) railingBlock2.display();
+  }
+
+  /** 前景：护栏 + 草丛（画在绶带之后） */
+  void displayFront() {
     if (guardrailBlock1 != null) guardrailBlock1.display();
     if (guardrailBlock2 != null) guardrailBlock2.display();
     if (grassBlock1 != null) grassBlock1.display();

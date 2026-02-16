@@ -125,6 +125,22 @@ class MountainLayerObject extends SceneObject {
   }
 }
 
+class ZhuziLayerObject extends SceneObject {
+  ZhuziLayer layer;
+
+  ZhuziLayerObject(ZhuziLayer layer) {
+    this.layer = layer;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (layer != null) layer.update(dt);
+  }
+
+  void draw() {
+    if (layer != null) layer.display();
+  }
+}
+
 class DenglongManagerObject extends SceneObject {
   DenglongManager manager;
 
@@ -173,7 +189,86 @@ class FirecrackerManagerObject extends SceneObject {
   }
 }
 
-// --- 路边近景层（预留：花盆、草丛、树木等，位于地面之上、小马之下） ---
+class FireworkManagerObject extends SceneObject {
+  FireworkManager manager;
+
+  FireworkManagerObject(FireworkManager manager) {
+    this.manager = manager;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (manager != null) manager.update(dt);
+  }
+
+  void draw() {
+    if (manager != null) manager.display();
+  }
+}
+
+// --- 路边近景层：中景（花+栏杆）→ 绶带 → 前景（护栏+草）---
+class RoadsideBackObject extends SceneObject {
+  RoadsideLayer layer;
+
+  RoadsideBackObject(RoadsideLayer layer) {
+    this.layer = layer;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (layer != null) layer.update(dt);
+  }
+
+  void draw() {
+    if (layer != null) layer.displayBack();
+  }
+}
+
+class BlessingSpritesBackObject extends SceneObject {
+  BlessingSpriteManager manager;
+
+  BlessingSpritesBackObject(BlessingSpriteManager manager) {
+    this.manager = manager;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+  }
+
+  void draw() {
+    if (manager != null) manager.displayBack();
+  }
+}
+
+class ShoudaiRibbonObject extends SceneObject {
+  ShoudaiRibbon ribbon;
+
+  ShoudaiRibbonObject(ShoudaiRibbon ribbon) {
+    this.ribbon = ribbon;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (ribbon != null && ribbon.isActive()) ribbon.update(dt);
+  }
+
+  void draw() {
+    if (ribbon != null) ribbon.display();
+  }
+}
+
+class RoadsideFrontObject extends SceneObject {
+  RoadsideLayer layer;
+
+  RoadsideFrontObject(RoadsideLayer layer) {
+    this.layer = layer;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+  }
+
+  void draw() {
+    if (layer != null) layer.displayFront();
+  }
+}
+
+// 兼容：整层一起画（测试等用）
 class RoadsideLayerObject extends SceneObject {
   RoadsideLayer layer;
 

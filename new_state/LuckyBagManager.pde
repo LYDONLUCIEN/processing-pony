@@ -8,8 +8,6 @@ class LuckyBagManager {
   PImage boxHeadImage;
   PImage boxBodyImage;
   int nextTimelineIndex;
-  float lastSpawnTime;
-  float spawnInterval;
 
   LuckyBagManager() {
     bags = new ArrayList<LuckyBag>();
@@ -35,8 +33,6 @@ class LuckyBagManager {
       }
     }
     nextTimelineIndex = 0;
-    lastSpawnTime = -999;
-    spawnInterval = getTimelineLuckyBagSpawnInterval();
   }
 
   void update(float dt, float musicTime, float ponyHeadX, float ponyHeadY, boolean ponyIsJumping) {
@@ -49,8 +45,7 @@ class LuckyBagManager {
       if (ponyIsJumping && bag.collidesWith(ponyHeadX, ponyHeadY)) {
         bag.onHit(ponyHeadX, ponyHeadY);
         String phrase = getBlessingPhrase(bag.getType());
-        PImage asset = loadBlessingAsset(bag.getType());
-        spawnBouncyWord(phrase, bag.getBagX(), bag.getBagY() - 60, asset);
+        spawnBouncyWord(phrase, bag.getBagX(), bag.getBagY() - 60, null);
         spawnBlessingSprite(bag.getType(), bag.getBagX(), bag.getBagY() - 40);
         println("[Blessing] Hit lucky bag: " + bag.getType() + " -> " + phrase);
       }
@@ -63,9 +58,12 @@ class LuckyBagManager {
       if (ponyIsJumping && box.collidesWith(ponyHeadX, ponyHeadY)) {
         box.onHit(ponyHeadX, ponyHeadY);
         String phrase = getBlessingPhrase(box.getType());
-        PImage asset = loadBlessingAsset(box.getType());
-        spawnBouncyWord(phrase, box.getBagX(), box.getBagY() + GIFT_BOX_PHRASE_Y_OFFSET, asset);
-        spawnBlessingSpriteFromBox(box.getType(), box.getBagX(), box.getBagY());
+        spawnBouncyWord(phrase, box.getBagX(), box.getBagY() + GIFT_BOX_PHRASE_Y_OFFSET, null);
+        if (box.getType().equals("fly")) {
+          spawnFlyRocketsAtPony();
+        } else {
+          spawnBlessingSpriteFromBox(box.getType(), box.getBagX(), box.getBagY());
+        }
         println("[Blessing] Hit gift box: " + box.getType() + " -> " + phrase);
       }
       if (box.isDone()) giftBoxes.remove(i);
@@ -75,12 +73,14 @@ class LuckyBagManager {
   void spawnFromTimeline(float musicTime) {
     JSONArray arr = getTimelineLuckyBags();
     float leadTime = getBlessingSpawnLeadTime();
+    // 撞击时刻 T 礼盒/福袋应到达「头顶位置」X = PONY_X + PONY_HEAD_APEX_OFFSET_X，不是 PONY_X
+    float hitX = PONY_X + PONY_HEAD_APEX_OFFSET_X;
     while (nextTimelineIndex < arr.size()) {
       JSONObject ev = arr.getJSONObject(nextTimelineIndex);
       float t = ev.getFloat("time");
       if (musicTime < t - leadTime) break;
       String type = ev.getString("type");
-      float startX = PONY_X + FORGE_SPEED * (t - musicTime);
+      float startX = hitX + FORGE_SPEED * (t - musicTime);
       if (USE_GIFT_BOX) spawnGiftBox(type, startX);
       else spawnBag(type, startX);
       nextTimelineIndex++;
@@ -98,7 +98,8 @@ class LuckyBagManager {
   void spawnGiftBox(String type, float startX) {
     if (boxHeadImage == null || boxBodyImage == null) return;
     float stringLen = random(GIFT_BOX_STRING_LENGTH_MIN, GIFT_BOX_STRING_LENGTH_MAX);
-    float anchorY = GIFT_BOX_ANCHOR_Y;
+    // 礼盒中心 Y = 头顶最高点 getPonyHeadApexY() + 调高偏移 GIFT_BOX_APEX_Y_RAISE（负值=更高）
+    float anchorY = getPonyHeadApexY() + GIFT_BOX_APEX_Y_RAISE - stringLen;
     GiftBox box = new GiftBox(boxHeadImage, boxBodyImage, startX, anchorY, stringLen, GIFT_BOX_SPEED, GIFT_BOX_SCALE, type);
     giftBoxes.add(box);
   }

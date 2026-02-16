@@ -275,6 +275,26 @@ void testDraw() {
     popMatrix();
   }
 
+  // 红点标出 PONY_HEAD 与 PONY_CHEST，便于在 AnimationConfig 里微调偏移
+  float headX = PONY_X + PONY_HEAD_OFFSET_X;
+  float headY = PONY_Y + PONY_HEAD_OFFSET_Y;
+  float chestX = PONY_X + PONY_CHEST_OFFSET_X;
+  float chestY = PONY_Y + PONY_CHEST_OFFSET_Y;
+  noStroke();
+  fill(255, 0, 0);
+  ellipse(headX, headY, 14, 14);
+  fill(255, 100, 100);
+  ellipse(chestX, chestY, 10, 10);
+  fill(255, 0, 0);
+  textSize(12);
+  textAlign(CENTER);
+  text("HEAD", headX, headY - 12);
+  text("CHEST", chestX, chestY - 10);
+  textAlign(LEFT, TOP);
+  // 跳跃最高点时头部位置（礼盒碰撞点），用半透明小点提示
+  fill(255, 0, 0, 120);
+  ellipse(headX, PONY_Y - PONY_JUMP_HEIGHT + PONY_HEAD_OFFSET_Y, 8, 8);
+
   for (int i = spritesFront.size() - 1; i >= 0; i--) {
     TestSpriteInstance s = spritesFront.get(i);
     s.update(dt);

@@ -1,5 +1,5 @@
 // ==================== 祝福字弹出（参考 word.pde） ====================
-// 4 字海绵弹效果 + 可选配套素材图
+// 多字海绵弹效果（支持 4 字、5 字等）+ 可选配套素材图
 // 样式：喜庆红字 + 鎏金镶边 + 外发光，可配置
 
 // 配色（中国喜庆风，可改）
@@ -12,9 +12,13 @@ color BLESSING_SHADOW = color(80, 20, 20);          // 阴影
 int BLESSING_BORDER_THICKNESS = 2;                   // 镶边厚度（像素）
 int BLESSING_GLOW_LAYERS = 5;                        // 外发光层数
 
-// 祝福字位置与弧度（负值=整体上移）
-float BLESSING_WORD_Y_OFFSET = -200;                 // 整体高度偏移（像素），负=更高
-float BLESSING_WORD_ARC_AMPLITUDE = 18;              // 弧度幅度（像素），左到右 低高高低（中间二字上翘）
+// 祝福字位置与高度：固定居中时用 FIXED_X/FIXED_Y；否则用 centerX / centerY + Y_OFFSET
+// 调字的高度：固定位置时改 BLESSING_WORD_FIXED_Y（越大越靠下）；非固定时改 BLESSING_WORD_Y_OFFSET
+boolean BLESSING_WORD_USE_FIXED_POSITION = true;     // true = 始终固定位置，方便你调
+float BLESSING_WORD_FIXED_X = 400;                   // 固定 X（画面中心）
+float BLESSING_WORD_FIXED_Y = 180;                   // 固定 Y，调此值可调字的高度
+float BLESSING_WORD_Y_OFFSET = -200;                 // 非固定时：相对传入 centerY 的偏移
+float BLESSING_WORD_ARC_AMPLITUDE = 18;              // 弧度幅度（像素），左到右 低高高低
 
 // 字体：系统字体名 或 data 目录下 .ttf/.otf 文件名（如 "data/YourFont.ttf"）
 String BLESSING_FONT_NAME = "data/xinchun.ttf";
@@ -42,16 +46,21 @@ void spawnBouncyWord(String phrase, float centerX, float centerY, PImage asset) 
   if (phrase == null || phrase.length() == 0) return;
   bouncyChars.clear();
   currentPhrase = phrase;
-  phraseCenterX = centerX;
-  phraseCenterY = centerY + BLESSING_WORD_Y_OFFSET;
+  if (BLESSING_WORD_USE_FIXED_POSITION) {
+    phraseCenterX = BLESSING_WORD_FIXED_X;
+    phraseCenterY = BLESSING_WORD_FIXED_Y;
+  } else {
+    phraseCenterX = centerX;
+    phraseCenterY = centerY + BLESSING_WORD_Y_OFFSET;
+  }
   wordActive = true;
   wordTimer = 0;
   pairedAsset = asset;
   assetPopTimer = 0;
 
-  int len = min(phrase.length(), 4);
+  int len = phrase.length();
   float totalW = (len - 1) * charSpacing;
-  float startX = centerX - totalW / 2;
+  float startX = phraseCenterX - totalW / 2;
   float arcAmp = BLESSING_WORD_ARC_AMPLITUDE;
   float denom = (len > 1) ? (len - 1) : 1;
 

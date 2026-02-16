@@ -1,5 +1,6 @@
 // ==================== 音乐时钟系统 ====================
 // 负责将 SoundFile 的播放进度转成「时间 / 拍子」信息
+// 音乐停止后时间继续推进（musicTime += dt），保证起扬等动画不卡住；背景停止由起扬动画触发
 
 class MusicClock {
   SoundFile song;
@@ -17,12 +18,18 @@ class MusicClock {
     this.bpm = bpm;
   }
 
-  void update() {
-    if (song != null) {
-      // SoundFile.position() 返回秒
-      musicTime = song.position();
+  void update(float dt) {
+    if (song != null && song.duration() > 0) {
+      if (!song.isPlaying()) {
+        // 音乐一停就靠 dt 推进时间，起扬等动画不卡住
+        musicTime += dt;
+      } else {
+        musicTime = song.position();
+      }
+    } else if (song != null) {
+      float pos = song.position();
+      musicTime = pos;
     } else {
-      // 容错：没有音乐时退回到 millis 计时，避免崩溃
       musicTime = millis() / 1000.0;
     }
 
@@ -37,4 +44,3 @@ class MusicClock {
     beatIndex = int(floor(beat));
   }
 }
-

@@ -162,8 +162,10 @@ class PonyController extends SceneObject implements BeatListener {
         int loopLen = max(1, qiyangTotalFrames - loopStart);
         float t = (animTime - qiyangLoopPhaseStartTime) * qiyangLoopFPS;
         int frameInLoop = (int)(t % loopLen);
+        if (frameInLoop < 0) frameInLoop += loopLen;
         int idx = loopStart + frameInLoop;
         if (idx >= qiyangTotalFrames) idx = qiyangTotalFrames - 1;
+        if (idx < 0) idx = 0;
         currentFrameIndex = idx;
         currentDisplayFrame = qiyangFrames != null && idx < qiyangTotalFrames ? qiyangFrames[idx] : runFrames[0];
       } else if (currentProgress >= 1.0f) {
@@ -173,47 +175,38 @@ class PonyController extends SceneObject implements BeatListener {
         int idx = qiyangStartFrame + (int)(currentProgress * playFrames);
         if (idx > lastFrame) idx = lastFrame;
         if (idx < qiyangStartFrame) idx = qiyangStartFrame;
+        if (idx < 0) idx = 0;
+        if (idx >= qiyangTotalFrames) idx = qiyangTotalFrames - 1;
         currentFrameIndex = idx;
         currentDisplayFrame = qiyangFrames != null && idx < qiyangTotalFrames ? qiyangFrames[idx] : runFrames[0];
       }
 
     } else if (state == 1) {
-      // ================= JUMPING =================
+      // ================= JUMPING（按节拍时长，恢复原来速度：3 拍内播完整个跳跃） =================
       float timeSinceJump = animTime - jumpStartTime;
-
-      int jumpStartFrame = 3;
-      int framesToPlay = jumpTotalFrames - jumpStartFrame;
-
-      float durationPerFrame = ((60.0 / bpm) * beatsForRemainingJump) / framesToPlay;
-      float totalJumpDurationSec = durationPerFrame * jumpTotalFrames;
-
-      float effectiveTime = timeSinceJump + (jumpStartFrame * durationPerFrame);
-      currentProgress = effectiveTime / totalJumpDurationSec;
+      float jumpDurationSec = (60.0f / bpm) * beatsForRemainingJump;
 
       if (timeSinceJump < 0) {
-        // 倒带保护：如果时间被拖回去了，回到 RUN 状态并重新排队
         state = 0;
         jumpRequested = true;
         lastRunIndex = -1;
         currentDisplayFrame = runFrames[0];
-
-      } else if (currentProgress >= 1.0) {
-        // 跳跃结束，回到 RUN
+      } else if (timeSinceJump >= jumpDurationSec) {
         state = 0;
         lastRunIndex = -1;
         runCycleOffset = animTime;
         println("<<< 落地：重置跑步相位");
-
         currentDisplayFrame = runFrames[0];
         currentFrameIndex = 0;
         currentProgress = 0;
-
       } else {
-        int index = int(currentProgress * jumpTotalFrames);
+        float progress = timeSinceJump / jumpDurationSec;
+        int index = (int)(progress * jumpTotalFrames);
         if (index < 0) index = 0;
         if (index >= jumpTotalFrames) index = jumpTotalFrames - 1;
         currentFrameIndex = index;
         currentDisplayFrame = jumpFrames[index];
+        currentProgress = progress;
       }
     }
   }

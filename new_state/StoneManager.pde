@@ -32,20 +32,29 @@ class Stone {
     translate(x, y);
     scale(scale);
     imageMode(CENTER);
-    image(img, 0, 0);
+    if (img != null && img.width > 1) {
+      image(img, 0, 0);
+    } else {
+      noStroke();
+      fill(120, 100, 80);
+      ellipse(0, 0, 40, 25);
+    }
     popMatrix();
   }
 
   boolean isOffScreen() {
-    return x < -img.width * scale;
+    float w = (img != null && img.width > 1) ? img.width * scale : 50;
+    return x < -w;
   }
 
   float getLeftEdge() {
-    return x - (img.width * scale) / 2;
+    float w = (img != null && img.width > 1) ? img.width * scale : 50;
+    return x - w / 2;
   }
 
   float getRightEdge() {
-    return x + (img.width * scale) / 2;
+    float w = (img != null && img.width > 1) ? img.width * scale : 50;
+    return x + w / 2;
   }
 
   boolean shouldTriggerJump(float ponyX) {
@@ -108,13 +117,14 @@ class StoneManager {
     for (int i = 0; i < STONE_COUNT; i++) {
       String path = STONE_PATH_PREFIX + (i + 1) + STONE_PATH_SUFFIX;
       PImage original = loadImage(path);
-
-      // 预先缩放以提高性能
-      int targetWidth = (int)(original.width * 0.4);
-      int targetHeight = (int)(original.height * 0.4);
-      original.resize(targetWidth, targetHeight);
-
-      stoneImages[i] = original;
+      if (original != null && original.width > 0) {
+        int targetWidth = (int)(original.width * 0.4);
+        int targetHeight = (int)(original.height * 0.4);
+        if (targetWidth > 0 && targetHeight > 0) original.resize(targetWidth, targetHeight);
+        stoneImages[i] = original;
+      } else {
+        stoneImages[i] = createImage(1, 1, ARGB);
+      }
     }
   }
 

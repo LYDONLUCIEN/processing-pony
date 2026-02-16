@@ -3,7 +3,7 @@
 // draw 中 fireworkUpdate(dt) / fireworkDisplay()，节奏或按键时调用 spawnFirework(x, y)。
 
 ArrayList<FireworkBurst> fireworkBursts = new ArrayList<FireworkBurst>();
-int FIREWORK_PARTICLE_COUNT = 48;
+// FIREWORK_PARTICLE_COUNT 使用 BlessingConfig 中的定义，避免重复
 float FIREWORK_INIT_SPEED = 180;
 float FIREWORK_GRAVITY = 120;
 float FIREWORK_FADE_TIME = 1.8;
@@ -18,7 +18,7 @@ color[] FIREWORK_COLORS = {
   color(255, 255, 100)
 };
 
-class FireworkParticle {
+class FireworkBurstParticle {
   float x, y;
   float vx, vy;
   float life;
@@ -26,7 +26,7 @@ class FireworkParticle {
   color c;
   float size;
 
-  FireworkParticle(float x, float y, float angle, float speed, color c, float size) {
+  FireworkBurstParticle(float x, float y, float angle, float speed, color c, float size) {
     this.x = x;
     this.y = y;
     this.vx = cos(angle) * speed;
@@ -58,32 +58,32 @@ class FireworkParticle {
 }
 
 class FireworkBurst {
-  ArrayList<FireworkParticle> particles;
+  ArrayList<FireworkBurstParticle> particles;
   float x, y;
 
   FireworkBurst(float x, float y, color baseColor) {
     this.x = x;
     this.y = y;
-    particles = new ArrayList<FireworkParticle>();
+    particles = new ArrayList<FireworkBurstParticle>();
     for (int i = 0; i < FIREWORK_PARTICLE_COUNT; i++) {
       float angle = TWO_PI * i / FIREWORK_PARTICLE_COUNT + random(0, 0.3);
       float speed = FIREWORK_INIT_SPEED * random(0.7, 1.2);
       color c = lerpColor(baseColor, color(255, 255, 255), random(0, 0.3));
       float sz = FIREWORK_PARTICLE_SIZE * random(0.8, 1.2);
-      particles.add(new FireworkParticle(x, y, angle, speed, c, sz));
+      particles.add(new FireworkBurstParticle(x, y, angle, speed, c, sz));
     }
   }
 
   void update(float dt) {
-    for (FireworkParticle p : particles) p.update(dt);
+    for (FireworkBurstParticle p : particles) p.update(dt);
   }
 
   void display() {
-    for (FireworkParticle p : particles) p.display();
+    for (FireworkBurstParticle p : particles) p.display();
   }
 
   boolean isDone() {
-    for (FireworkParticle p : particles) {
+    for (FireworkBurstParticle p : particles) {
       if (!p.isDead()) return false;
     }
     return true;

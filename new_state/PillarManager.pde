@@ -25,12 +25,21 @@ class Pillar {
     translate(x, y);
     scale(scale);
     imageMode(CENTER);
-    image(img, 0, 0);
+    if (img != null && img.width > 1) {
+      image(img, 0, 0);
+    } else {
+      noStroke();
+      fill(200, 160, 100);
+      rect(0, 0, 30, 80);
+      fill(180, 140, 80);
+      rect(-2, -42, 34, 12);
+    }
     popMatrix();
   }
 
   boolean isOffScreen() {
-    return x < -img.width * scale;
+    float w = (img != null && img.width > 1) ? img.width * scale : 50;
+    return x < -w;
   }
 }
 

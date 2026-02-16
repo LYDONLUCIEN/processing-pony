@@ -62,10 +62,10 @@ class CloudLayer {
         continue;
       }
 
-      // 预先缩放到中等尺寸以提高性能
-      int targetWidth = (int)(original.width * 0.5);
-      int targetHeight = (int)(original.height * 0.5);
-      original.resize(targetWidth, targetHeight);
+      // 按 CLOUD_LOAD_SCALE 缩放（调大则云图更大、更显眼）
+      int targetWidth = (int)(original.width * CLOUD_LOAD_SCALE);
+      int targetHeight = (int)(original.height * CLOUD_LOAD_SCALE);
+      if (targetWidth > 0 && targetHeight > 0) original.resize(targetWidth, targetHeight);
 
       cloudImages[i] = original;
     }

@@ -13,46 +13,62 @@
 
 // ==================== 一、全局速度 ====================
 // 改这一处即可同步：路边/地面滚动、福袋/礼物盒水平移动速度
-final float FORGE_SPEED = 190;
+final float FORGE_SPEED = 240;
 
 // ==================== 二、小马与节奏 ====================
 final float PONY_X = 400;
 final float PONY_Y = 380;
 final float PONY_SCALE = 1.0;
-final float PONY_JUMP_HEIGHT = 300;
+final float PONY_JUMP_HEIGHT = 50;
+// 头部碰撞点（相对 PONY_X；Y 随跳跃高度变化）：用于礼盒/福袋碰撞
+final float PONY_HEAD_OFFSET_X = 60;
+final float PONY_HEAD_OFFSET_Y = -40;
+// 小马头顶在最高点时的位置（用于礼盒垂直对齐、可微调）：头顶 ≈ (PONY_X + APEX_X, PONY_Y + APEX_Y)
+final float PONY_HEAD_APEX_OFFSET_X = 60;
+final float PONY_HEAD_APEX_OFFSET_Y = -90;
+// 胸口位置（相对 PONY_X, PONY_Y）：手袋/马到成功等文字与精灵出现位置
+final float PONY_CHEST_OFFSET_X = 42;
+final float PONY_CHEST_OFFSET_Y = 42;
 
 // 跑步周期（6 帧 = 1 beat）：主流程由 BPM 驱动，测试由 RUN_FPS 驱动
 final int RUN_FRAMES = 6;
 final float RUN_FPS = 10;
 final float BPM = 129.0;
 
-// 起扬序列
-final int QIYANG_TOTAL_FRAMES = 169;
-final int QIYANG_START_FRAME = 14;
-final float QIYANG_FPS = 12;
+// 起扬序列（主流程与 test 共用；改这里即可）
+final int QIYANG_TOTAL_FRAMES = 158;
+final int QIYANG_START_FRAME = 14;   // 从 qiyang_14.png 开始播
+final int QIYANG_END_FRAME = 64;     // 到达此帧时背景全部停
+final int QIYANG_LOOP_START_FRAME = 75;  // 第一遍播完后，从 qiyang_75.png 开始循环到结尾
+final float QIYANG_FPS = 24;
+final float QIYANG_LOOP_FPS = 24;   // 循环段播放帧率
 
-// 跳跃
+// 跳跃：时长由 BPM + beatsForRemainingJump 决定（3 拍），最高点在第 14 帧（0-based 为第 13 帧）
 final int JUMP_TOTAL_FRAMES = 23;
+final int JUMP_APEX_FRAME = 14;   // 第 14 帧为最高点（1-based）
+// 最高点占整段跳跃的比例，用于算起跳提前量：jumpApexTimeSec = (60/bpm)*beatsForRemainingJump * JUMP_APEX_FRACTION
+final float JUMP_APEX_FRACTION = (JUMP_APEX_FRAME - 1) / (float) JUMP_TOTAL_FRAMES;
+// 仅用于 test.pde 等测试草图的跳跃帧率；主流程用 beat 时长
 final float JUMP_FPS = 8;
-final float JUMP_APEX_TIME = (JUMP_TOTAL_FRAMES / 2.0f) / JUMP_FPS;
 
 // ==================== 三、背景（云、山、路边、地面） ====================
 
 final String BACKGROUND_PATH = "../assets/background/background.png";
 final float BACKGROUND_SCALE = 1.0;
 
-// 云
+// 云（若看不清可调：ALPHA 调高、SCALE 调大、LOAD_SCALE 调大）
 final String CLOUD_PATH_PREFIX = "../assets/cloud/cd";
 final String CLOUD_PATH_SUFFIX = ".png";
 final int CLOUD_COUNT = 5;
 final int CLOUD_MIN_CLOUDS = 2;
 final int CLOUD_MAX_CLOUDS = 3;
-final float CLOUD_MIN_SCALE = 0.25;
-final float CLOUD_MAX_SCALE = 0.35;
-final float CLOUD_MIN_Y = 50;
+final float CLOUD_MIN_SCALE = 0.25;    // 显示缩放下限，调大更显眼
+final float CLOUD_MAX_SCALE = 0.35;    // 显示缩放上限
+final float CLOUD_MIN_Y = 50;          // 云朵 Y 范围（像素）
 final float CLOUD_MAX_Y = 250;
 final float CLOUD_SPEED = 0.2;
-final int CLOUD_ALPHA = 180;
+final int CLOUD_ALPHA = 220;           // 透明度 0~255，调高更不透明、更显眼
+final float CLOUD_LOAD_SCALE = 0.6;    // 加载时图片缩放（0.5=半尺寸），调大云图更大
 final float CLOUD_OFFSCREEN_LEFT = 420;
 final float CLOUD_MIN_GAP = 320;
 final float CLOUD_SPAWN_INTERVAL_MIN = 8.0;
@@ -112,6 +128,15 @@ final int PILLAR_SPAWN_INTERVAL_BEATS = 8;
 final float PILLAR_SPEED = 280.0;
 final float PILLAR_BASE_Y = 400;
 final float PILLAR_SCALE = 0.3;
+
+// 柱子 zhuzi（与 flower/railing 同逻辑：FORGE_SPEED 无缝双块滚动，在花丛/栏杆后、山前）
+final String ZHUZI_IMAGE_PATH = "../assets/zhuzi/zhuzi.png";
+final float ZHUZI_SCALE = 1.4f;           // 显示缩放，细节可调
+final float ZHUZI_BASE_Y = ROADSIDE_RAILING_BASE_Y-100;
+final float ZHUZI_SPEED = FORGE_SPEED;
+final int ZHUZI_MAX_TEXTURE_WIDTH = 2400;   // 加载时若图更宽则等比压缩，0 表示不压缩
+// test_zhuzi 与栏杆对齐用
+final int ZHUZI_ANCHOR_COUNT = 6;
 
 final String FIRECRACKER_PATH_PREFIX = "../assets/firecracker/firecracker_";
 final String FIRECRACKER_PATH_SUFFIX = ".png";

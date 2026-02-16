@@ -26,6 +26,15 @@ class FireworkParticle {
   void draw() {
     if (life <= 0) return;
     float alpha = 255 * (life / maxLife);
+    float speed = sqrt(vx * vx + vy * vy);
+    if (speed < 1) speed = 1;
+    float k = FIREWORK_PARTICLE_TAIL_LEN / speed;
+    float tx = x - vx * k;
+    float ty = y - vy * k;
+    // 长尾：沿速度反方向画线段，再画头部圆点
+    stroke(red(c), green(c), blue(c), alpha * 0.5f);
+    strokeWeight(max(size * 1.8f, 1.2f));
+    line(tx, ty, x, y);
     noStroke();
     fill(red(c), green(c), blue(c), alpha);
     ellipse(x, y, size * 2, size * 2);
@@ -75,8 +84,7 @@ class Firework {
   void explode() {
     exploded = true;
     justExploded = true;
-    color[] colors = { color(255, 80, 80), color(255, 180, 50), color(255, 255, 100), color(100, 200, 255), color(255, 100, 255) };
-    color c = colors[(int)random(colors.length)];
+    color c = FIREWORK_COLORS.length > 0 ? FIREWORK_COLORS[(int)random(FIREWORK_COLORS.length)] : color(255, 200, 100);
     for (int i = 0; i < FIREWORK_PARTICLE_COUNT; i++) {
       float angle = random(TWO_PI);
       float speed = FIREWORK_PARTICLE_SPEED * random(0.4, 1.0);

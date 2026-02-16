@@ -246,21 +246,30 @@ final float SHOUDAI_DURATION_BEFORE_QIYANG = 5.0f;
 final int BLESSING_SUCCESS_FIRECRACKER_BURST_COUNT = 3;
 // 烟花：在 success（马到成功）触发前 N 秒开始放，之后持续到关闭
 final float FIREWORK_SUCCESS_LEAD_SEC = 3.0f;
-final float FIREWORK_SUCCESS_SPAWN_INTERVAL = 1.2f;
+// 密度：间隔越小烟花越密（如 0.5 更密，1.2 更稀）
+final float FIREWORK_SUCCESS_SPAWN_INTERVAL = 0.55f;
 
 // ==================== 九、马年大吉（手袋持续播放 + 烟花） ====================
 final float BLESSING_DAJI_SHOUDAI_DURATION = 8.0;   // 大吉时手袋播放时长（秒）
-final int BLESSING_DAJI_FIREWORK_COUNT = 5;         // 大吉时连续发射烟花数量
+final int BLESSING_DAJI_FIREWORK_COUNT = 10;        // 大吉时连续发射烟花数量（改大更密）
 // 烟花（Processing 绘制）：从画面下方发射，在天空 Y 50~200 爆炸
 final float FIREWORK_EXPLODE_Y_MIN = 50;
 final float FIREWORK_EXPLODE_Y_MAX = 200;
 final float FIREWORK_RISE_SPEED = 420;
-final int FIREWORK_PARTICLE_COUNT = 120;   // 粒子更多、更集中
-final float FIREWORK_PARTICLE_FADE_TIME = 1.2;
-final float FIREWORK_PARTICLE_SPEED = 90;  // 速度降低，爆炸更集中
-// 粒子更小（像素）
-final float FIREWORK_PARTICLE_SIZE_MIN = 1.2f;
-final float FIREWORK_PARTICLE_SIZE_MAX = 2.8f;
+final int FIREWORK_PARTICLE_COUNT = 180;            // 单发粒子数（改大更密）
+final float FIREWORK_PARTICLE_FADE_TIME = 1.4;
+final float FIREWORK_PARTICLE_SPEED = 100;
+// 粒子更小（像素半径），改小更细腻
+final float FIREWORK_PARTICLE_SIZE_MIN = 0.45f;
+final float FIREWORK_PARTICLE_SIZE_MAX = 1.1f;
+// 粒子拖尾长度（像素），改大尾巴更长
+final float FIREWORK_PARTICLE_TAIL_LEN = 28f;
+// 多彩配色（烟花爆炸颜色池，可增删 color）
+color[] FIREWORK_COLORS = new color[] {
+  color(255, 70, 110),   color(255, 180, 50),   color(255, 255, 100),
+  color(100, 210, 255),  color(200, 120, 255),  color(255, 100, 180),
+  color(100, 255, 180),  color(255, 220, 100),  color(180, 140, 255)
+};
 // 爆炸音效（空串表示不播放）；路径相对 sketch 或绝对
 final String FIREWORK_EXPLODE_SOUND_PATH = "../assets/sound/explosion.wav";
 

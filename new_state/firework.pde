@@ -8,15 +8,7 @@ float FIREWORK_INIT_SPEED = 180;
 float FIREWORK_GRAVITY = 120;
 float FIREWORK_FADE_TIME = 1.8;
 float FIREWORK_PARTICLE_SIZE = 3;
-
-color[] FIREWORK_COLORS = {
-  color(255, 100, 100),
-  color(255, 200, 100),
-  color(100, 200, 255),
-  color(255, 100, 255),
-  color(100, 255, 150),
-  color(255, 255, 100)
-};
+// FIREWORK_COLORS 使用 BlessingConfig 中的定义，避免重复
 
 class FireworkBurstParticle {
   float x, y;

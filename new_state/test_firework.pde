@@ -20,7 +20,7 @@ void testFireworkSetup() {
     println("[test_firework] 未配置 FIREWORK_EXPLODE_SOUND_PATH，不播放音效");
   }
   prevMillis = millis();
-  println("[test_firework] 空格/左键=一发 | B=连发5发 | 粒子参数见 BlessingConfig");
+  println("[test_firework] 空格/左键=一发 | B=连发5发 | 粒子/密度/尾长/颜色均在 BlessingConfig，调好后 new_state 共用");
 }
 
 void testFireworkDraw() {
@@ -39,9 +39,9 @@ void testFireworkDraw() {
   noStroke();
   textSize(14);
   textAlign(LEFT, TOP);
-  text("TEST FIREWORK — 空格/左键=发射一发 | B=连发5发", 10, 10);
-  text("粒子: COUNT=" + FIREWORK_PARTICLE_COUNT + " FADE=" + nf(FIREWORK_PARTICLE_FADE_TIME, 0, 1) + "s SPEED=" + FIREWORK_PARTICLE_SPEED + " SIZE=" + nf(FIREWORK_PARTICLE_SIZE_MIN, 0, 1) + "~" + nf(FIREWORK_PARTICLE_SIZE_MAX, 0, 1), 10, 28);
-  text("音效: " + (testExplosionSound != null ? FIREWORK_EXPLODE_SOUND_PATH : "未加载"), 10, 46);
+  text("TEST FIREWORK — 空格/左键=一发 | B=连发5发 | 调参后主流程共用 BlessingConfig", 10, 10);
+  text("粒子: COUNT=" + FIREWORK_PARTICLE_COUNT + " FADE=" + nf(FIREWORK_PARTICLE_FADE_TIME, 0, 1) + "s SPEED=" + FIREWORK_PARTICLE_SPEED + " SIZE=" + nf(FIREWORK_PARTICLE_SIZE_MIN, 0, 2) + "~" + nf(FIREWORK_PARTICLE_SIZE_MAX, 0, 2) + " 尾长=" + nf(FIREWORK_PARTICLE_TAIL_LEN, 0, 0) + "px 色数=" + FIREWORK_COLORS.length, 10, 28);
+  text("密度: SUCCESS_INTERVAL=" + nf(FIREWORK_SUCCESS_SPAWN_INTERVAL, 0, 2) + "s DAJI_COUNT=" + BLESSING_DAJI_FIREWORK_COUNT + " | 音效: " + (testExplosionSound != null ? "已加载" : "未加载"), 10, 46);
 }
 
 void testFireworkKeyPressed() {

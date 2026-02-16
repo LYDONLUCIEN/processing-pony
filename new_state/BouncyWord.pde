@@ -38,8 +38,18 @@ float wordDuration = 8.0;
 
 void initBlessingFont() {
   blessingFont = createFont(BLESSING_FONT_NAME, BLESSING_FONT_SIZE);
-  if (blessingFont == null) blessingFont = createFont("Arial", BLESSING_FONT_SIZE);
+  if (blessingFont == null) {
+    String[] fallbacks = { "Microsoft YaHei", "SimHei", "SimSun", "NSimSun", "KaiTi", "FangSong", "Arial" };
+    for (String name : fallbacks) {
+      blessingFont = createFont(name, BLESSING_FONT_SIZE);
+      if (blessingFont != null) {
+        println("Blessing font fallback: " + name + " " + BLESSING_FONT_SIZE + "pt (xinchun.ttf 未找到)");
+        break;
+      }
+    }
+  }
   if (blessingFont != null) println("Blessing font: " + BLESSING_FONT_NAME + " " + BLESSING_FONT_SIZE + "pt");
+  if (blessingFont == null) println("WARN: No font loaded for blessing text. Put a .ttf in data/ or install Chinese system font.");
 }
 
 void spawnBouncyWord(String phrase, float centerX, float centerY, PImage asset) {
@@ -85,7 +95,8 @@ void updateBouncyWord(float dt) {
 
 void drawBouncyWord() {
   if (!wordActive) return;
-  if (blessingFont != null) textFont(blessingFont);
+  if (blessingFont == null) return;
+  textFont(blessingFont);
   textAlign(CENTER, CENTER);
 
   for (BouncyChar bc : bouncyChars) bc.display();

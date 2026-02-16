@@ -11,7 +11,7 @@ boolean TEST_FIREWORK = false;
 // 设为 false 时隐藏左侧调试文字与底部自动跳跃时间条；需要调试时改回 true
 boolean SHOW_DEBUG_UI = false;
 // 调试：从歌曲最后 N 秒开始播放（仅测试结尾段时用）；0 = 从头播放。例如设为 15 则直接播最后 15 秒（绶带/烟花/马到成功/起扬）
-float DEBUG_JUMP_TO_LAST_SEC = 0;
+float DEBUG_JUMP_TO_LAST_SEC = 15;
 
 String folderName = "C:/Users/Admin/Documents/Processing/project/project-pony/output";
 String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/assets/song/马年大吉.wav";
@@ -80,8 +80,12 @@ boolean shoudaiRibbonSpawned = false;
 // 娱乐模式：开口福袋光标，按住/划动爆金币
 boolean entertainmentMode = false;
 PImage entertainmentCursorImg = null;
+PImage cursorFingerImg = null;  // 手指素材，替换默认鼠标图标
 float lastEntertainSpawnX = -9999;
 float lastEntertainSpawnY = -9999;
+// Hold 模式：按住鼠标时从鼠标位置持续倾泻元宝/钱币/红包（任意位置均可）；默认未按住
+boolean mouseHeld = false;
+float holdSpawnAccumulator = 0;
 
 // ==================== 跳跃高度计算 ====================
 float getJumpHeight(float progress) {
@@ -195,6 +199,14 @@ void setup() {
     entertainmentCursorImg.resize(w, h);
   }
 
+  // 手指光标图（替换默认鼠标图标）
+  cursorFingerImg = loadImage(CURSOR_FINGER_PATH);
+  if (cursorFingerImg != null && cursorFingerImg.width > 0) {
+    int w = (int)CURSOR_FINGER_SIZE;
+    int h = (int)((float)cursorFingerImg.height * w / cursorFingerImg.width);
+    cursorFingerImg.resize(w, h);
+  }
+
   song = new SoundFile(this, musicFile);
   song.play();  // 不循环，音乐播完就结束
 
@@ -243,7 +255,7 @@ void setup() {
   beatDispatcher.addListener(pony);
 
   prevMillis = millis();
-  println(">>> 点击小马可以触发金币红包特效");
+  println(">>> 点击小马可触发金币红包；任意位置按住鼠标可从该处持续倾泻元宝/钱币/红包");
 }
 
 void draw() {
@@ -269,6 +281,15 @@ void draw() {
   prevMillis = currMillis;
 
   if (musicClock != null) musicClock.update(dt);
+
+  // Hold 模式：按住鼠标时从鼠标位置持续倾泻元宝/钱币/红包（与点击同逻辑，从鼠标处倒出）
+  if (mouseHeld && moneyEffect != null) {
+    holdSpawnAccumulator += dt;
+    while (holdSpawnAccumulator >= HOLD_SPAWN_INTERVAL) {
+      moneyEffect.spawn(mouseX, mouseY);
+      holdSpawnAccumulator -= HOLD_SPAWN_INTERVAL;
+    }
+  }
 
   // 主时间轴：优先跟随音乐，保证长时间播放也不会音画漂移
   if (!isPaused) {
@@ -356,7 +377,9 @@ void draw() {
         nextOtherAnimationIndex++;
         continue;
       }
-      spawnBouncyWord(getBlessingPhrase(type), PONY_X + PONY_CHEST_OFFSET_X, PONY_Y + PONY_CHEST_OFFSET_Y, loadBlessingAsset(type));
+      // 仅 success 时配 shoudai 素材（绶带触发展示）；daji 只显示「马年大吉」文字 + 烟花，不再出现 shoudai 动画
+      PImage asset = type.equals("daji") ? null : loadBlessingAsset(type);
+      spawnBouncyWord(getBlessingPhrase(type), PONY_X + PONY_CHEST_OFFSET_X, PONY_Y + PONY_CHEST_OFFSET_Y, asset);
       if (type.equals("daji")) {
         if (fireworkManager != null) fireworkManager.spawnBurst(BLESSING_DAJI_FIREWORK_COUNT);
       }
@@ -418,9 +441,9 @@ void draw() {
     drawTimeline();
   }
 
-  // 娱乐模式：绘制开口福袋光标并隐藏系统光标
+  // 自定义光标：隐藏系统鼠标，用手指或娱乐模式福袋图
+  noCursor();
   if (entertainmentMode) {
-    noCursor();
     if (entertainmentCursorImg != null && entertainmentCursorImg.width > 0) {
       imageMode(CENTER);
       image(entertainmentCursorImg, mouseX, mouseY);
@@ -429,6 +452,9 @@ void draw() {
       noStroke();
       circle(mouseX, mouseY, ENTERTAINMENT_CURSOR_SIZE);
     }
+  } else if (cursorFingerImg != null && cursorFingerImg.width > 0) {
+    imageMode(CENTER);
+    image(cursorFingerImg, mouseX, mouseY);
   } else {
     cursor();
   }
@@ -493,6 +519,7 @@ void drawDebugUI(int frameIdx, float prog) {
   fill(255);
   textAlign(LEFT, TOP);
   textSize(14);
+  if (blessingFont != null) textFont(blessingFont);
   int y = 10;
   int dy = 20;
 
@@ -533,7 +560,7 @@ void drawDebugUI(int frameIdx, float prog) {
   if (entertainmentMode) {
     fill(255, 220, 0);
     text("娱乐模式: 开（按 E 关闭）", 10, y += dy);
-    text("按住/划动鼠标 = 爆金币红包", 10, y += dy);
+    text("按住/划动鼠标 = 爆金币红包；任意位置按住 = 从该处倾泻元宝/钱币/红包", 10, y += dy);
   } else {
     text("按 E 开启娱乐模式（福袋光标+划动爆金币）", 10, y += dy);
   }
@@ -563,7 +590,6 @@ void keyPressed() {
   }
   if (key == 'e' || key == 'E') {
     entertainmentMode = !entertainmentMode;
-    if (!entertainmentMode) cursor();
   }
   if (key == ' ') {
     if (pony != null) pony.requestJump();
@@ -604,6 +630,8 @@ void mousePressed() {
     testFireworkMousePressed();
     return;
   }
+  mouseHeld = true;
+  holdSpawnAccumulator = 0;
   if (entertainmentMode) {
     moneyEffect.spawn(mouseX, mouseY);
     lastEntertainSpawnX = mouseX;
@@ -611,7 +639,14 @@ void mousePressed() {
   } else if (pony != null && pony.isMouseOver(mouseX, mouseY)) {
     moneyEffect.spawn(PONY_X, PONY_Y);
     println("触发金币红包特效!");
+  } else {
+    // Hold 模式：非娱乐模式且未点中小马时，也从鼠标位置先喷一批
+    moneyEffect.spawn(mouseX, mouseY);
   }
+}
+
+void mouseReleased() {
+  mouseHeld = false;
 }
 
 void mouseDragged() {

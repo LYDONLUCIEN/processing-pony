@@ -156,7 +156,11 @@ final float STONE_BASE_Y = 480;
 final float STONE_SCALE = 0.08;
 final float STONE_JUMP_TRIGGER_X = 300;
 
-// ==================== 六、金币红包 ====================
+// ==================== 六、金币红包（点击/按住倾泻的元宝·钱币·红包） ====================
+// 【大小】MONEY_BASE_SCALE：粒子显示缩放，改小更小（如 0.05），改大更大（如 0.12）
+// 【密度】MONEY_PARTICLE_COUNT：每次生成粒子个数，改小更稀疏（如 4），改大更密（如 12）
+// 【密度】HOLD_SPAWN_INTERVAL（见下方「娱乐/Hold」）：按住时每批间隔，改大倾泻更慢/更稀
+// 【扩散】MONEY_SPREAD_X/Y：生成时相对中心偏移范围；素材加载缩放见 MoneyEffect.pde 内 0.3
 final String[] MONEY_PATHS = {
   "../assets/money/hb1.png",
   "../assets/money/hb2.png",
@@ -166,21 +170,25 @@ final String[] MONEY_PATHS = {
   "../assets/money/yb1.png",
   "../assets/money/yb2.png"
 };
-final int MONEY_PARTICLE_COUNT = 8;
+final int MONEY_PARTICLE_COUNT = 6;
 final float MONEY_SPREAD_X = 100;
 final float MONEY_SPREAD_Y = 200;
 final float MONEY_GRAVITY = 150.0;
 final float MONEY_MIN_SPEED = 60.0;
 final float MONEY_MAX_SPEED = 150.0;
 final float MONEY_FADE_TIME = 3;
-final float MONEY_BASE_SCALE = 0.08;
+final float MONEY_BASE_SCALE = 0.06;
 
 // ==================== 七、娱乐模式与起扬触发 ====================
 final float QIYANG_TRIGGER_SECONDS_BEFORE_END = 5.0;
 
 final String ENTERTAINMENT_CURSOR_PATH = "../assets/blessings/bag.png";
 final float ENTERTAINMENT_CURSOR_SIZE = 36;
+final String CURSOR_FINGER_PATH = "../assets/finger/finger.png";  // 替换默认鼠标图标
+final float CURSOR_FINGER_SIZE = 20;
 final float ENTERTAINMENT_SPAWN_STEP = 22;
+// Hold 模式：按住鼠标时每隔多少秒在鼠标位置生成一批元宝/钱币/红包（越小倾泻越快）
+final float HOLD_SPAWN_INTERVAL = 0.06;
 
 // ==================== 八、输出目录 ====================
 final String OUTPUT_BASE = "../output";

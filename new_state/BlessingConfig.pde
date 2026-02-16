@@ -22,6 +22,8 @@ String[] otherTypes = { "fly", "success", "daji" };
 
 FloatList timelineHitTimes = new FloatList();
 
+// 跳跃触发时间 = data/blessings_timeline.json 里 stones[].time 与 luckyBags[].time 合并后排序去重。
+// 改少/改多跳跃：编辑 blessings_timeline.json 的 stones 和 luckyBags，调整或增加 time（秒）即可；间奏处可新增 stones 或 luckyBags 条目。
 void loadBlessingsTimeline() {
   timelineRoot = loadJSONObject("data/blessings_timeline.json");
   timelineHitTimes.clear();

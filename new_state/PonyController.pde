@@ -37,9 +37,10 @@ class PonyController extends SceneObject implements BeatListener {
   float jumpStartTime = 0;
   float qiyangStartTime = 0;
 
-  // 测试模式时间轴（使用秒为单位的时间戳）
+  // 测试模式：为 true 时按 jumpTimeline 在指定秒数自动起跳（主流程跳跃由 new_state 按 JSON 驱动，此处仅测试用）
   boolean testMode = true;
-  float[] jumpTimeline = { 2.0, 4.5, 7.0, 9.5, 12.0 };
+  // 早期 debug 用的 5 次已去掉；若需在测试模式下有自动跳，可在此填时间（秒），如 { 3.0, 6.0 }
+  float[] jumpTimeline = new float[0];
   int nextTestIndex = 0;
 
   PonyController(PImage[] runFrames, PImage[] jumpFrames, PImage[] qiyangFrames,
@@ -216,8 +217,6 @@ class PonyController extends SceneObject implements BeatListener {
       drawPony(currentDisplayFrame);
     }
 
-    if (state == 0 && jumpRequested) drawWaitingIcon();
-    if (state == 0 && qiyangRequested) drawWaitingIcon();
   }
 
   // ========== BeatListener 接口（目前保留为扩展点） ==========

@@ -56,23 +56,53 @@ final float JUMP_FPS = 8;
 final String BACKGROUND_PATH = "../assets/background/background.png";
 final float BACKGROUND_SCALE = 1.0;
 
-// 云（若看不清可调：ALPHA 调高、SCALE 调大、LOAD_SCALE 调大）
+// ---------- background.png 渐变（与 sky 配合完成转换） ----------
+// 未到开始时间时，不透明度 = OPACITY_START；渐变结束后 = OPACITY_END
+// 第几秒开始渐变（音乐时间）
+final float BACKGROUND_FADE_START_SEC = 82.0f;
+// 渐变持续时间（秒），越小变化越快
+final float BACKGROUND_FADE_DURATION = 6.0f;
+// 起始不透明度 0~1（0=完全透明，1=完全不透明）
+final float BACKGROUND_OPACITY_START = 1.0f;   // 一开始背景完全可见
+// 结束不透明度 0~1。 渐渐出现 = (0, 1)，渐渐消失 = (1, 0)
+final float BACKGROUND_OPACITY_END = 0.0f;     // 最后背景消失，露出天空
+
+// ---------- sky.png 渐变（与 background 配合完成转换） ----------
+final String SKY_FILTER_PATH = "../assets/sky2.png";
+// 第几秒开始渐变（可与 BACKGROUND_FADE_START_SEC 对齐）
+final float SKY_FILTER_START_SEC = 80.0f;
+// 渐变持续时间（秒）
+final float SKY_FILTER_FADE_DURATION = 6.0f;
+// 起始不透明度 0~1（未到开始时间时 = 此值）
+final float SKY_FILTER_OPACITY_START = 0.0f;   // 一开始 sky 完全看不见
+// 结束不透明度 0~1。 渐渐出现 = (0, 0.8)，渐渐消失 = (0.8, 0)
+final float SKY_FILTER_OPACITY_END = 1f;     // 最后看到 sky（深蓝滤镜）
+
+// 云（约 800 像素内同时 3～5 朵；可山前/山后，山前概率更高）
 final String CLOUD_PATH_PREFIX = "../assets/cloud/cd";
 final String CLOUD_PATH_SUFFIX = ".png";
 final int CLOUD_COUNT = 5;
-final int CLOUD_MIN_CLOUDS = 2;
-final int CLOUD_MAX_CLOUDS = 3;
-final float CLOUD_MIN_SCALE = 0.25;    // 显示缩放下限，调大更显眼
-final float CLOUD_MAX_SCALE = 0.35;    // 显示缩放上限
-final float CLOUD_MIN_Y = 50;          // 云朵 Y 范围（像素）
+final int CLOUD_MIN_CLOUDS = 3;        // 800px 内最少朵数
+final int CLOUD_MAX_CLOUDS = 5;       // 800px 内最多朵数
+final float CLOUD_MIN_SCALE = 0.18;    // 显示缩放下限，改小更小
+final float CLOUD_MAX_SCALE = 0.28;    // 显示缩放上限
+final float CLOUD_MIN_Y = 50;
 final float CLOUD_MAX_Y = 250;
-final float CLOUD_SPEED = 0.2;
-final int CLOUD_ALPHA = 220;           // 透明度 0~255，调高更不透明、更显眼
-final float CLOUD_LOAD_SCALE = 0.6;    // 加载时图片缩放（0.5=半尺寸），调大云图更大
+// 云朵从左向右看是「从右向左」移动，单位 像素/秒；太小会像静止，太大则太快（FORGE_SPEED≈240 可作参考）
+final float CLOUD_SPEED = 2;
+final int CLOUD_ALPHA = 220;
+final float CLOUD_LOAD_SCALE = 0.5;    // 加载时缩放，改小云图更小
 final float CLOUD_OFFSCREEN_LEFT = 420;
-final float CLOUD_MIN_GAP = 320;
-final float CLOUD_SPAWN_INTERVAL_MIN = 8.0;
-final float CLOUD_SPAWN_INTERVAL_MAX = 15.0;
+final float CLOUD_MIN_GAP = 180;       // 朵间最小间隔（小一点可塞更多，如 3～5 朵/800px）
+final float CLOUD_SPAWN_INTERVAL_MIN = 5.0;
+final float CLOUD_SPAWN_INTERVAL_MAX = 11.0;
+// 云在山前的概率 0~1（0.7 = 70% 山前、30% 山后）
+final float CLOUD_IN_FRONT_OF_MOUNTAIN_PROB = 0.7f;
+// 固定在山后的高层云：数量 1～2 朵，Y 更小=更靠上（像素）
+final int CLOUD_HIGH_BACK_COUNT_MIN = 1;
+final int CLOUD_HIGH_BACK_COUNT_MAX = 2;
+final float CLOUD_HIGH_BACK_Y_MIN = 25.0f;
+final float CLOUD_HIGH_BACK_Y_MAX = 95.0f;
 
 // 山
 final String MOUNTAIN_PATH = "../assets/mountain/finall-all.png";

@@ -93,15 +93,44 @@ class CloudLayerObject extends SceneObject {
   }
 
   void update(float dt, float musicTime, float beat) {
-    if (layer != null) {
-      layer.update(dt);
-    }
+    if (layer != null) layer.update(dt);
   }
 
   void draw() {
-    if (layer != null) {
-      layer.display();
-    }
+    if (layer != null) layer.display();
+  }
+}
+
+/** 云层·山后：只画 inFrontOfMountain=false 的云 */
+class CloudLayerBackObject extends SceneObject {
+  CloudLayer layer;
+
+  CloudLayerBackObject(CloudLayer layer) {
+    this.layer = layer;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+    if (layer != null) layer.update(dt);
+  }
+
+  void draw() {
+    if (layer != null) layer.displayBack();
+  }
+}
+
+/** 云层·山前：只画 inFrontOfMountain=true 的云 */
+class CloudLayerFrontObject extends SceneObject {
+  CloudLayer layer;
+
+  CloudLayerFrontObject(CloudLayer layer) {
+    this.layer = layer;
+  }
+
+  void update(float dt, float musicTime, float beat) {
+  }
+
+  void draw() {
+    if (layer != null) layer.displayFront();
   }
 }
 

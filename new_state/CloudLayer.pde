@@ -6,13 +6,21 @@ class Cloud {
   float x, y;
   float scale;
   float speed;
+  boolean inFrontOfMountain;  // true = 画在山前，false = 画在山后
+  boolean isHighBack;         // true = 固定在山后的高层云，始终在 displayBack 中画
 
-  Cloud(PImage img, float x, float y, float scale, float speed) {
+  Cloud(PImage img, float x, float y, float scale, float speed, boolean inFrontOfMountain) {
+    this(img, x, y, scale, speed, inFrontOfMountain, false);
+  }
+
+  Cloud(PImage img, float x, float y, float scale, float speed, boolean inFrontOfMountain, boolean isHighBack) {
     this.img = img;
     this.x = x;
     this.y = y;
     this.scale = scale;
     this.speed = speed;
+    this.inFrontOfMountain = inFrontOfMountain;
+    this.isHighBack = isHighBack;
   }
 
   void update(float dt) {
@@ -80,7 +88,7 @@ class CloudLayer {
   }
 
   void spawnInitialClouds() {
-    // 在 800 宽度内均匀放 2～3 朵，保持 CLOUD_MIN_GAP 间隔
+    // 在 800 宽度内均匀放 3～5 朵，保持 CLOUD_MIN_GAP 间隔
     int count = (int)random(CLOUD_MIN_CLOUDS, CLOUD_MAX_CLOUDS + 1);
     float span = max(CLOUD_MIN_GAP, (width - CLOUD_MIN_GAP) / max(1, count - 1));
     for (int i = 0; i < count; i++) {
@@ -93,8 +101,15 @@ class CloudLayer {
         float scale = random(CLOUD_MIN_SCALE, CLOUD_MAX_SCALE);
         float y = random(CLOUD_MIN_Y, CLOUD_MAX_Y);
         float speed = CLOUD_SPEED * random(0.95f, 1.05f);
-        clouds.add(new Cloud(img, x, y, scale, speed));
+        boolean inFront = random(1) < CLOUD_IN_FRONT_OF_MOUNTAIN_PROB;
+        clouds.add(new Cloud(img, x, y, scale, speed, inFront, false));
       }
+    }
+    // 固定在山后的高层云 1～2 朵，位置更高，从右侧入画
+    int highCount = (int)random(CLOUD_HIGH_BACK_COUNT_MIN, CLOUD_HIGH_BACK_COUNT_MAX + 1);
+    for (int i = 0; i < highCount; i++) {
+      float startX = width + 60 + i * 200 + random(0, 150);
+      spawnHighBackCloud(startX);
     }
     scheduleNextSpawn();
   }
@@ -106,7 +121,24 @@ class CloudLayer {
     float scale = random(CLOUD_MIN_SCALE, CLOUD_MAX_SCALE);
     float y = random(CLOUD_MIN_Y, CLOUD_MAX_Y);
     float speed = CLOUD_SPEED * random(0.95f, 1.05f);
-    clouds.add(new Cloud(img, startX, y, scale, speed));
+    boolean inFront = random(1) < CLOUD_IN_FRONT_OF_MOUNTAIN_PROB;
+    clouds.add(new Cloud(img, startX, y, scale, speed, inFront, false));
+  }
+
+  /** 固定在山后的高层云（1～2 朵），Y 更高，始终在山后 */
+  void spawnHighBackCloud(float startX) {
+    int imgIndex = (int)random(cloudImages.length);
+    PImage img = cloudImages[imgIndex];
+    float scale = random(CLOUD_MIN_SCALE, CLOUD_MAX_SCALE);
+    float y = random(CLOUD_HIGH_BACK_Y_MIN, CLOUD_HIGH_BACK_Y_MAX);
+    float speed = CLOUD_SPEED * random(0.9f, 1.1f);
+    clouds.add(new Cloud(img, startX, y, scale, speed, false, true));
+  }
+
+  int getHighBackCloudCount() {
+    int n = 0;
+    for (Cloud c : clouds) if (c.isHighBack) n++;
+    return n;
   }
 
   void scheduleNextSpawn() {
@@ -120,6 +152,9 @@ class CloudLayer {
       cloud.update(dt);
 
       if (cloud.isOffScreen()) {
+        if (cloud.isHighBack) {
+          spawnHighBackCloud(width + 80);
+        }
         clouds.remove(i);
       }
     }
@@ -134,8 +169,20 @@ class CloudLayer {
   }
 
   void display() {
+    for (Cloud cloud : clouds) cloud.display();
+  }
+
+  /** 山后的云（先画） */
+  void displayBack() {
     for (Cloud cloud : clouds) {
-      cloud.display();
+      if (!cloud.inFrontOfMountain) cloud.display();
+    }
+  }
+
+  /** 山前的云（后画，在山层之后） */
+  void displayFront() {
+    for (Cloud cloud : clouds) {
+      if (cloud.inFrontOfMountain) cloud.display();
     }
   }
 

@@ -11,7 +11,7 @@ boolean TEST_FIREWORK = false;
 // 设为 false 时隐藏左侧调试文字与底部自动跳跃时间条；需要调试时改回 true
 boolean SHOW_DEBUG_UI = false;
 // 调试：从歌曲最后 N 秒开始播放（仅测试结尾段时用）；0 = 从头播放。例如设为 15 则直接播最后 15 秒（绶带/烟花/马到成功/起扬）
-float DEBUG_JUMP_TO_LAST_SEC = 15;
+float DEBUG_JUMP_TO_LAST_SEC = 0;
 
 String folderName = "C:/Users/Admin/Documents/Processing/project/project-pony/output";
 String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/assets/song/马年大吉.wav";
@@ -53,6 +53,7 @@ int prevMillis = 0;
 
 // ==================== 动画层系统 ====================
 PImage backgroundImage;
+PImage skyFilterImage;
 CloudLayer cloudLayer;
   MountainLayer mountainLayer;
   ZhuziLayer zhuziLayer;
@@ -165,7 +166,7 @@ void setup() {
   }
 
   backgroundImage = loadImage(BACKGROUND_PATH);
-
+  skyFilterImage = loadImage(SKY_FILTER_PATH);
   cloudLayer = new CloudLayer();
   mountainLayer = new MountainLayer();
   zhuziLayer = new ZhuziLayer();
@@ -234,9 +235,10 @@ void setup() {
   // 小马控制器（基于音乐时间驱动的跑/跳/起扬 FSM）
   pony = new PonyController(runFrames, jumpFrames, qiyangFrames, bpm, beatsPerRunCycle, beatsForRemainingJump, beatsForQiyang, QIYANG_START_FRAME, QIYANG_END_FRAME, QIYANG_LOOP_START_FRAME, QIYANG_LOOP_FPS);
 
-  // 图层顺序（从远到近）：云 → 山 → 地面 → 路边近景 → 灯笼 → 柱子 → 鞭炮 → 小马 → 石头 → 金币特效
-  mainScene.add(new CloudLayerObject(cloudLayer));
+  // 图层顺序（从远到近）：云(山后) → 山 → 云(山前) → 地面 → 路边近景 → …
+  mainScene.add(new CloudLayerBackObject(cloudLayer));
   mainScene.add(new MountainLayerObject(mountainLayer));
+  mainScene.add(new CloudLayerFrontObject(cloudLayer));
   mainScene.add(new FireworkManagerObject(fireworkManager));  // 烟花在柱子前，被 zhuzi 遮挡
   mainScene.add(new ZhuziLayerObject(zhuziLayer));
   mainScene.add(new GroundManagerObject(groundManager));
@@ -414,14 +416,17 @@ void draw() {
     if (blessingSpriteManager != null) blessingSpriteManager.update(dt);
   }
 
-  drawBackground();
+  float musicTimeForDraw = (musicClock != null ? musicClock.musicTime : animTime);
+  drawBackground(musicTimeForDraw);
+  drawSkyFilter(musicTimeForDraw);
   // 场景负责绘制所有背景/中景/前景层（包括小马和金币特效）
   if (mainScene != null) {
     mainScene.drawAll();
   } else {
-    // 容错：如果场景未初始化，按图层顺序绘制
-    cloudLayer.display();
+    // 容错：如果场景未初始化，按图层顺序绘制（云后→山→云前）
+    cloudLayer.displayBack();
     mountainLayer.display();
+    cloudLayer.displayFront();
     groundManager.display();
     if (roadsideLayer != null) roadsideLayer.display();
     denglongManager.display();
@@ -460,12 +465,39 @@ void draw() {
   }
 }
 
-void drawBackground() {
+void drawBackground(float musicTime) {
   background(240);
-  imageMode(CORNER);
-  if (backgroundImage != null) {
-    image(backgroundImage, 0, 0, width, height);
+  if (backgroundImage == null || backgroundImage.width <= 0) return;
+  float progress = 0;
+  if (BACKGROUND_FADE_DURATION > 0 && musicTime >= BACKGROUND_FADE_START_SEC) {
+    progress = (musicTime - BACKGROUND_FADE_START_SEC) / BACKGROUND_FADE_DURATION;
+    if (progress > 1.0f) progress = 1.0f;
   }
+  float opacity = BACKGROUND_OPACITY_START + (BACKGROUND_OPACITY_END - BACKGROUND_OPACITY_START) * progress;
+  if (opacity <= 0) return;
+  int alpha = (int)(255 * opacity);
+  if (alpha > 255) alpha = 255;
+  tint(255, 255, 255, alpha);
+  imageMode(CORNER);
+  image(backgroundImage, 0, 0, width, height);
+  noTint();
+}
+
+void drawSkyFilter(float musicTime) {
+  if (skyFilterImage == null || skyFilterImage.width <= 0) return;
+  float progress = 0;
+  if (musicTime >= SKY_FILTER_START_SEC && SKY_FILTER_FADE_DURATION > 0) {
+    progress = (musicTime - SKY_FILTER_START_SEC) / SKY_FILTER_FADE_DURATION;
+    if (progress > 1.0f) progress = 1.0f;
+  }
+  float opacity = SKY_FILTER_OPACITY_START + (SKY_FILTER_OPACITY_END - SKY_FILTER_OPACITY_START) * progress;
+  if (opacity <= 0) return;
+  int alpha = (int)(255 * opacity);
+  if (alpha > 255) alpha = 255;
+  tint(255, 255, 255, alpha);
+  imageMode(CORNER);
+  image(skyFilterImage, 0, 0, width, height);
+  noTint();
 }
 
 void drawPony(PImage img) {

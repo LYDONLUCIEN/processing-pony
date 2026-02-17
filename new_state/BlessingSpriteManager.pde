@@ -87,7 +87,8 @@ class BlessingSpriteInstance {
       float tSmooth = t * t * (3 - 2 * t);
       drawX = lerp(popOutStartX, targetX, tSmooth);
       float linearY = lerp(popOutStartY, targetY, tSmooth);
-      drawY = linearY + BLESSING_POP_OUT_ARC_HEIGHT * sin(t * PI);
+      // Y 向下为正：减去弧高使轨迹向上弯（从盒子飞向马背），加的话会先往地面沉再弹上来
+      drawY = linearY - BLESSING_POP_OUT_ARC_HEIGHT * sin(t * PI);
       drawScale = lerp(popOutStartScale, scale, tSmooth);
     } else {
       drawX = targetX;
@@ -208,6 +209,11 @@ class BlessingSpriteManager {
       bobSpeed, bobAmp, bobRand, bobPhase,
       BLESSING_POP_OUT_DURATION, BLESSING_POP_OUT_START_SCALE);
     instances.add(inst);
+  }
+
+  void clearAll() {
+    instances.clear();
+    instancesBack.clear();
   }
 
   void update(float dt) {

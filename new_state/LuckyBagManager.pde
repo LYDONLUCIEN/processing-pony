@@ -35,6 +35,12 @@ class LuckyBagManager {
     nextTimelineIndex = 0;
   }
 
+  void resetForRestart() {
+    bags.clear();
+    giftBoxes.clear();
+    nextTimelineIndex = 0;
+  }
+
   void update(float dt, float musicTime, float ponyHeadX, float ponyHeadY, boolean ponyIsJumping) {
     if (backgroundFrozen) return;
     spawnFromTimeline(musicTime);
@@ -79,6 +85,10 @@ class LuckyBagManager {
       JSONObject ev = arr.getJSONObject(nextTimelineIndex);
       float t = ev.getFloat("time");
       if (musicTime < t - leadTime) break;
+      if (t - musicTime < 0) {
+        nextTimelineIndex++;
+        continue;
+      }
       String type = ev.getString("type");
       float startX = hitX + FORGE_SPEED * (t - musicTime);
       if (USE_GIFT_BOX) spawnGiftBox(type, startX);

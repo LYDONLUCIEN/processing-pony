@@ -128,6 +128,10 @@ class FireworkManager {
     explosionSound = s;
   }
 
+  void clearAll() {
+    fireworks.clear();
+  }
+
   void spawnFirework() {
     float x = random(width * 0.15, width * 0.85);
     float explodeY = random(FIREWORK_EXPLODE_Y_MIN, FIREWORK_EXPLODE_Y_MAX);

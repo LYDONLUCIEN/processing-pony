@@ -11,7 +11,7 @@ boolean TEST_FIREWORK = false;
 // 设为 false 时隐藏左侧调试文字与底部自动跳跃时间条；需要调试时改回 true
 boolean SHOW_DEBUG_UI = false;
 // 调试：从歌曲最后 N 秒开始播放（仅测试结尾段时用）；0 = 从头播放。例如设为 15 则直接播最后 15 秒（绶带/烟花/马到成功/起扬）
-float DEBUG_JUMP_TO_LAST_SEC = 0;
+float DEBUG_JUMP_TO_LAST_SEC = 15;
 
 String folderName = "C:/Users/Admin/Documents/Processing/project/project-pony/output";
 String musicFile = "C:/Users/Admin/Documents/Processing/project/project-pony/assets/song/马年大吉.wav";
@@ -87,6 +87,8 @@ float lastEntertainSpawnY = -9999;
 // Hold 模式：按住鼠标时从鼠标位置持续倾泻元宝/钱币/红包（任意位置均可）；默认未按住
 boolean mouseHeld = false;
 float holdSpawnAccumulator = 0;
+// 按 R 重启：0=无，1=下一帧只 stop，2=下一帧 jump(0)+play+复位（两帧避免 stop 未生效就 play 导致多段叠加）
+int restartPhase = 0;
 
 // ==================== 跳跃高度计算 ====================
 float getJumpHeight(float progress) {
@@ -260,6 +262,46 @@ void setup() {
   println(">>> 点击小马可触发金币红包；任意位置按住鼠标可从该处持续倾泻元宝/钱币/红包");
 }
 
+void doRestartPhase1() {
+  if (song != null && song.duration() > 0) {
+    song.stop();
+    song.cue(0);   // 停止后把播放头归零，第二次及以后按 R 时 play() 才能从 0 开始
+  }
+}
+
+void doRestartPhase2() {
+  if (song != null && song.duration() > 0) {
+    song.cue(0);   // 明确把播放头设到 0，再 play()；否则第二次重启时（音乐已播完）jump(0)+play 可能不生效
+    song.play();
+  }
+  if (musicClock != null) musicClock.resetToStart();
+  if (beatDispatcher != null) beatDispatcher.lastBeatIndex = -1;
+  animTime = 0;
+  isPaused = false;
+
+  nextJumpTriggerIndex = 0;
+  nextOtherAnimationIndex = 0;
+  qiyangTriggered = false;
+  successTriggeredTime = -1;
+  backgroundFrozen = false;
+  fireworkActive = false;
+  fireworkSpawnAccum = 0;
+
+  shoudaiRibbonSpawned = false;
+  if (shoudaiRibbon != null) shoudaiRibbon.deactivate();
+
+  if (luckyBagManager != null) luckyBagManager.resetForRestart();
+  if (stoneManager != null) stoneManager.resetForRestart();
+  if (blessingSpriteManager != null) blessingSpriteManager.clearAll();
+  if (fireworkManager != null) fireworkManager.clearAll();
+  if (firecrackerManager != null) firecrackerManager.clearAll();
+  resetBouncyWord();
+
+  if (pony != null) pony.resetToStart();
+
+  println("[R] 已从头重启：音乐、动画与状态已复位，方便录制");
+}
+
 void draw() {
   if (TEST_ZHUZI) {
     int currMillis = millis();
@@ -281,6 +323,14 @@ void draw() {
   int currMillis = millis();
   float dt = (currMillis - prevMillis) / 1000.0;
   prevMillis = currMillis;
+
+  if (restartPhase == 1) {
+    doRestartPhase1();
+    restartPhase = 2;
+  } else if (restartPhase == 2) {
+    doRestartPhase2();
+    restartPhase = 0;
+  }
 
   if (musicClock != null) musicClock.update(dt);
 
@@ -598,6 +648,7 @@ void drawDebugUI(int frameIdx, float prog) {
   }
   y += dy;
   fill(255, 255, 0);
+  text("按 R 从头重启（音乐+动画+状态，方便录制）", 10, y += dy);
   text("按 T 切换 测试/手动 模式", 10, y += dy);
   text("按 P 暂停", 10, y += dy);
   text("按 空格 手动跳跃", 10, y += dy);
@@ -618,6 +669,10 @@ void keyPressed() {
   }
   if (TEST_MODE) {
     testKeyPressed();
+    return;
+  }
+  if (key == 'r' || key == 'R' || keyCode == 82) {
+    if (restartPhase == 0) restartPhase = 1;
     return;
   }
   if (key == 'e' || key == 'E') {

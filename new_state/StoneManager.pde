@@ -87,6 +87,12 @@ class StoneManager {
     loadStoneImages();
   }
 
+  void resetForRestart() {
+    stones.clear();
+    nextStoneTimelineIndex = 0;
+    spawnTimer = 0;
+  }
+
   void spawnFromTimeline(float musicTime) {
     JSONArray arr = getTimelineStones();
     if (arr.size() == 0) return;
@@ -95,6 +101,10 @@ class StoneManager {
       JSONObject ev = arr.getJSONObject(nextStoneTimelineIndex);
       float t = ev.getFloat("time");
       if (musicTime < t - leadTime) break;
+      if (t - musicTime < 0) {
+        nextStoneTimelineIndex++;
+        continue;
+      }
       int textIdx = ev.hasKey("textIndex") ? ev.getInt("textIndex") : (nextStoneTextIndex++ % max(1, stoneTexts.length));
       float startX = PONY_X + FORGE_SPEED * (t - musicTime);
       spawnOneStone(startX, textIdx, FORGE_SPEED);

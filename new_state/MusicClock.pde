@@ -18,6 +18,12 @@ class MusicClock {
     this.bpm = bpm;
   }
 
+  void resetToStart() {
+    musicTime = 0;
+    beat = 0;
+    beatIndex = 0;
+  }
+
   void update(float dt) {
     if (song != null && song.duration() > 0) {
       if (!song.isPlaying()) {

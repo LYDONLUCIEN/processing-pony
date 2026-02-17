@@ -88,6 +88,18 @@ class PonyController extends SceneObject implements BeatListener {
     setTestMode(!testMode);
   }
 
+  void resetToStart() {
+    state = 0;
+    jumpRequested = false;
+    qiyangRequested = false;
+    qiyangInLoop = false;
+    runCycleOffset = 0;
+    nextTestIndex = 0;
+    currentFrameIndex = 0;
+    currentProgress = 0;
+    lastRunIndex = -1;
+  }
+
   // ========== SceneObject 接口 ==========
   void update(float dt, float musicTime, float beat) {
     float animTime = musicTime;  // 对于小马而言，直接使用音乐时间作为主时间轴

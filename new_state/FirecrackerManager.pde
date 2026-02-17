@@ -53,6 +53,11 @@ class FirecrackerManager {
     loadFirecrackerImages();
   }
 
+  void clearAll() {
+    firecrackers.clear();
+    lastSpawnBeat = -9999;
+  }
+
   void loadFirecrackerImages() {
     firecrackerImages = new PImage[FIRECRACKER_COUNT];
     for (int i = 0; i < FIRECRACKER_COUNT; i++) {

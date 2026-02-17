@@ -52,6 +52,15 @@ void initBlessingFont() {
   if (blessingFont == null) println("WARN: No font loaded for blessing text. Put a .ttf in data/ or install Chinese system font.");
 }
 
+void resetBouncyWord() {
+  wordActive = false;
+  bouncyChars.clear();
+  currentPhrase = "";
+  wordTimer = 0;
+  pairedAsset = null;
+  assetPopTimer = 0;
+}
+
 void spawnBouncyWord(String phrase, float centerX, float centerY, PImage asset) {
   if (phrase == null || phrase.length() == 0) return;
   bouncyChars.clear();
